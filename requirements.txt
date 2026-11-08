@@ -1,0 +1,18 @@
+Django==4.2.16
+celery==5.4.0
+redis==5.1.1
+psycopg2-binary==2.9.9
+python-decouple==3.8
+requests==2.32.3
+whitenoise==6.7.0
+django-allauth==64.2.1
+django-rosetta==0.9.9
+gunicorn==23.0.0
+dnspython==2.7.0
+reportlab==4.2.5
+sentry-sdk[django,celery]==2.63.0
+cryptography==50.0.0
+PyJWT==2.13.0
+Pillow==12.3.0
+# Reads the .devopsaudit.yml a repository can ship to tune its own audit.
+PyYAML==6.0.2

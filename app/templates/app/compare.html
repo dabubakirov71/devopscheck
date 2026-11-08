@@ -1,0 +1,62 @@
+{% extends "app/base.html" %}
+{% load i18n app_extras %}
+
+{% block title %}{% trans "DevOpsCheck vs OpenSSF Scorecard, GitHub Advanced Security, Snyk and Trivy" %}{% endblock %}
+{% block meta_description %}{% trans "An honest comparison: what DevOpsCheck, OpenSSF Scorecard, GitHub Advanced Security, Snyk and Trivy each cover, where DevOpsCheck is stronger and where it is weaker." %}{% endblock %}
+
+{% block extra_style %}
+.cmp-wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 80px; }
+.cmp-wrap h1 { font-size: clamp(25px, 4vw, 34px); font-weight: 800; letter-spacing: -.02em; color: #f0f8ff; margin-bottom: 12px; }
+.cmp-lead { color: var(--muted); font-size: 15px; line-height: 1.7; margin-bottom: 28px; max-width: 70ch; }
+.cmp-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+.cmp-table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 13.5px; }
+.cmp-table th, .cmp-table td { padding: 11px 12px; border-bottom: 1px solid var(--border); text-align: center; vertical-align: top; }
+.cmp-table th:first-child, .cmp-table td:first-child { text-align: left; color: var(--text); }
+.cmp-table thead th { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.cmp-table thead th.us { color: var(--accent); }
+.cmp-table td.us { background: rgba(0,255,136,.04); }
+.y { color: var(--accent); } .n { color: var(--dim); } .p { color: var(--amber, #ffaa00); }
+.cmp-sec { margin-top: 36px; }
+.cmp-sec h2 { font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--text); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.cmp-sec li { color: var(--muted); font-size: 14.5px; line-height: 1.7; margin: 0 0 8px 18px; }
+.cmp-note { font-size: 12.5px; color: var(--dim); margin-top: 12px; }
+.cmp-note a, .cmp-sec a { color: var(--accent); }
+@media (max-width: 640px) { .cmp-wrap { padding: 32px 16px 60px; } }
+{% endblock %}
+
+{% block content %}
+<div class="cmp-wrap">
+  <h1>{% trans "How DevOpsCheck compares" %}</h1>
+  <p class="cmp-lead">{% trans "Most of these tools are excellent and several are free. They answer different questions, and many teams run more than one. This table says what each covers — including where we are weaker." %}</p>
+
+  <div class="cmp-scroll">
+  <table class="cmp-table">
+    <thead><tr><th scope="col"></th><th scope="col" class="us">DevOpsCheck</th><th scope="col">OpenSSF Scorecard</th><th scope="col">GitHub Advanced Security</th><th scope="col">Snyk</th><th scope="col">Trivy</th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+      <tr><td>{{ row.0 }}</td>{% for cell in row.1 %}<td class="{% if forloop.first %}us {% endif %}{{ cell.0 }}">{{ cell.1 }}</td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="cmp-note">{% blocktrans %}Based on each product's public documentation as of September 2026. Something wrong or out of date? Write to {{ support_email }} and we will correct it.{% endblocktrans %}</p>
+
+  <section class="cmp-sec">
+    <h2>{% trans "Where DevOpsCheck is stronger" %}</h2>
+    <ul>
+      <li>{% trans "It opens the fix: for configuration findings — workflow permissions, pinned actions, Dockerfile user, Dependabot or Renovate config — the result is a pull request, not a ticket." %}</li>
+      <li>{% trans "One report and one 0–100 score across secrets, dependencies, CI/CD supply chain, containers and infrastructure — the view a team lead needs, instead of five tools' output." %}</li>
+      <li>{% trans "Self-hosted GitLab on internal networks, in English and Russian." %}</li>
+    </ul>
+  </section>
+  <section class="cmp-sec">
+    <h2>{% trans "Where it is weaker" %}</h2>
+    <ul>
+      <li>{% trans "No code analysis (SAST): it does not look for bugs in application source. Use CodeQL or Snyk Code for that." %}</li>
+      <li>{% trans "No offline CLI yet: scans run on our server. Trivy and Scorecard run entirely on your machine." %}</li>
+      <li>{% trans "A young product with a smaller rule set than the specialised scanners it overlaps with." %}</li>
+    </ul>
+    <p style="margin-top:14px"><a href="{% url 'scan_index' %}">{% trans "Try it on a public repository — free, no account" %} →</a></p>
+  </section>
+</div>
+{% endblock %}

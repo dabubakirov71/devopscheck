@@ -1,0 +1,41 @@
+{
+ "category_scores": {
+  "ci_cd": 46,
+  "iac": 75,
+  "security": 77
+ },
+ "checks": {
+  "actions.broad_permissions": false,
+  "actions.pinned_sha": false,
+  "actions.pull_request_target": true,
+  "actions.script_injection": true,
+  "actions.self_hosted_public": true,
+  "ci.branch_protection": false,
+  "ci.linter": false,
+  "ci.pipeline": true,
+  "ci.security_scan": true,
+  "ci.tests": false,
+  "docs.changelog": true,
+  "docs.contributing": true,
+  "docs.readme": true,
+  "docs.readme_quality": true,
+  "docs.templates": false,
+  "iac.no_hardcoded_credentials": true,
+  "iac.open_ingress": true,
+  "iac.pinned_providers": true,
+  "iac.remote_state": false,
+  "iac.scanning": true,
+  "ops.activity": false,
+  "ops.gitignore": true,
+  "ops.license": true,
+  "security.codeowners": false,
+  "security.dependency_updates": false,
+  "security.env_not_committed": true,
+  "security.no_secrets": true,
+  "security.security_policy": false
+ },
+ "confidence": 0.85,
+ "full_name": "terraform-aws-modules/terraform-aws-vpc",
+ "kind": "infrastructure",
+ "score": 71
+}

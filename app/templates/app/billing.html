@@ -1,0 +1,537 @@
+{% extends "app/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Billing" %} — DevOpsCheck{% endblock %}
+
+{% block extra_style %}
+/* Badges are flex children of the card, so without this they stretch edge to edge. */
+.status-badge { align-self: flex-start; }
+
+/* The accordion had markup and a toggle function but no styles at all, so the
+   questions rendered as the browser's own buttons — light chips on a dark page —
+   and every answer sat open. On the page where somebody decides to pay. */
+.faq-item {
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); overflow: hidden;
+  transition: border-color .15s;
+}
+.faq-item:hover { border-color: var(--border2); }
+.faq-q {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; text-align: left; cursor: pointer;
+  background: none; border: 0; padding: 15px 18px;
+  font-family: inherit; font-size: 14px; font-weight: 600; color: var(--text);
+  transition: color .15s;
+}
+.faq-q:hover { color: var(--accent); }
+.faq-q.open { color: var(--accent); }
+.faq-arrow {
+  flex-shrink: 0; font-size: 11px; color: var(--muted);
+  transition: transform .2s ease, color .15s;
+}
+.faq-q.open .faq-arrow { transform: rotate(90deg); color: var(--accent); }
+/* Collapsed by grid rows rather than max-height, so a long answer opens to
+   exactly its own height instead of a guessed one. */
+.faq-a {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows .22s ease;
+  color: var(--muted); font-size: 13.5px; line-height: 1.7;
+}
+.faq-a > * { min-height: 0; }
+.faq-a.open { grid-template-rows: 1fr; }
+.faq-a-inner { overflow: hidden; padding: 0 18px; }
+.faq-a.open .faq-a-inner { padding-bottom: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  .faq-a, .faq-arrow { transition: none; }
+}
+
+.period-tab {
+  font-family: var(--mono); font-size: 12px; letter-spacing: .05em; padding: 9px 20px;
+  border: 1px solid var(--border2); border-radius: 5px; color: var(--muted);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.period-tab:hover { color: var(--text); }
+.period-tab.on { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 700; }
+.save-chip {
+  font-size: 11.5px; padding: 1px 6px; border-radius: 3px;
+  background: rgba(0,0,0,.18); letter-spacing: .06em;
+}
+.period-tab:not(.on) .save-chip { background: rgba(0,255,136,.12); color: var(--accent); }
+
+/* Four plans in a 760px box wrapped and squeezed every line. Same width and
+   card system as the public pricing page, so the two never look like different
+   products. */
+.billing-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+  max-width: 1120px; margin: 30px auto 0; align-items: stretch;
+}
+.plan-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 22px 20px;
+  display: flex; flex-direction: column; align-items: stretch;
+  transition: border-color .2s;
+}
+.plan-card.active { border-color: var(--accent); box-shadow: 0 0 40px rgba(0,255,136,.06); }
+.plan-card.pro-card { background: linear-gradient(135deg, rgba(0,255,136,.04) 0%, var(--surface) 100%); }
+.plan-tag {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 12px;
+}
+.plan-tag.green { color: var(--accent); }
+.plan-name { font-size: 22px; font-weight: 700; color: #f0f8ff; margin-bottom: 6px; }
+.plan-name { font-size: 18px; }
+.plan-desc { font-size: 12.5px; line-height: 1.55; min-height: 36px; }
+.plan-feature { font-size: 12.5px; }
+.plan-price {
+  font-size: 44px; font-weight: 800; color: var(--accent);
+  line-height: 1; letter-spacing: -.04em; margin-bottom: 4px;
+}
+.plan-price sup { font-size: 16px; vertical-align: baseline; color: var(--muted); font-weight: 600; }
+.plan-price .per { font-size: 12.5px; color: var(--muted); font-weight: 400; letter-spacing: 0; }
+.plan-desc { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+hr.plan-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.plan-feature {
+  font-size: 13px; display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px; color: var(--muted);
+}
+.plan-feature.yes { color: var(--text); }
+.plan-feature.yes::before { content: '✓'; color: var(--accent); font-size: 12px; flex-shrink: 0; }
+.plan-feature.no::before  { content: '—'; color: var(--dim);   flex-shrink: 0; }
+
+/* Pinned to the bottom so every card ends on the same line. */
+.pay-section { margin-top: auto; padding-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+/* The card for the plan you already pay for. It used to offer to sell it to
+   you again, which on a recurring provider means a second subscription. */
+.plan-active {
+  border: 1px solid rgba(0,255,136,.3); border-radius: 6px;
+  background: rgba(0,255,136,.05); padding: 12px 14px; text-align: center;
+}
+.plan-active-line {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  letter-spacing: .04em; color: var(--accent);
+}
+.plan-active-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 8px var(--accent);
+}
+.plan-active-sub { font-size: 11.5px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+.plan-active-cancel {
+  display: inline-block; margin-top: 9px; font-size: 11px;
+  color: var(--dim); text-decoration: underline; text-underline-offset: 2px;
+}
+.plan-active-cancel:hover { color: var(--red); }
+.plan-card > .plan-feature:last-of-type { margin-bottom: 0; }
+.btn-pay {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; min-height: 44px; padding: 11px 14px;
+  font-family: var(--sans); font-size: 12.5px; font-weight: 600;
+  border: 1px solid transparent; border-radius: 6px;
+  cursor: pointer; transition: all .15s; text-decoration: none; white-space: nowrap;
+}
+.btn-pay-card { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.btn-pay-card:hover { background: var(--accent2); border-color: var(--accent2); box-shadow: 0 0 24px rgba(0,255,136,.2); }
+.btn-pay-crypto {
+  background: transparent; color: var(--text); border: 1px solid var(--border2);
+}
+.btn-pay-crypto:hover { border-color: var(--amber); color: var(--amber); background: rgba(255,170,0,.06); }
+.pay-ico { font-size: 15px; line-height: 1; }
+.btn-pay-crypto .crypto-icon { font-size: 16px; }
+.btn-pay-contact {
+  background: transparent; color: var(--text); border: 1px solid var(--border2);
+}
+.btn-pay-contact:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,255,136,.05); }
+.pay-note { font-size: 11px; line-height: 1.5; color: var(--dim); text-align: center; }
+
+
+/* Touch targets on a fingertip pointer. Accordion headers and tabs are real
+   controls and get the full 44px; a link inside a sentence is left alone,
+   because padding it out breaks the line it belongs to. */
+@media (pointer: coarse), (max-width: 700px) {
+  .faq-q { min-height: 44px; }
+  .period-tab { min-height: 44px; display: inline-flex; align-items: center; }
+}
+
+/* The quota meter. Its markup referenced four class names that were never
+   declared anywhere, so the section had always rendered as a bare line of text
+   with no bar under it — the number was there, the meaning was not. */
+.usage-bar-wrap {
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 18px 20px; background: var(--surface);
+}
+.usage-label {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  font-size: 13px; color: var(--muted); margin-bottom: 7px;
+}
+.usage-label > span:last-child { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+.usage-bar { height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.usage-fill { height: 100%; border-radius: 99px; transition: width .4s ease; }
+.usage-note { font-size: 12px; color: var(--muted); margin-top: 7px; line-height: 1.65; }
+.usage-note a { color: var(--accent); }
+@media (max-width: 560px) {
+  .usage-bar-wrap { padding: 15px 16px; }
+  .usage-label { flex-wrap: wrap; }
+}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  {% if messages %}
+  <div style="max-width:900px;margin:0 auto 16px">
+    {% for message in messages %}
+    <div class="alert-box alert-warn">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="pg-hdr" style="max-width:900px;margin-left:auto;margin-right:auto">
+    <div class="pg-eyebrow">// billing</div>
+    <h1 class="pg-title">{% trans "Plan & Payments" %}</h1>
+  </div>
+
+  {% if subscription.is_pro %}
+  <!-- ── ACTIVE PAID PLAN ────────────────────────────────────────────────── -->
+  <div class="plan-card active" style="max-width:760px;margin:24px auto 0">
+    <div class="status-badge pro"><span class="status-dot"></span> {{ subscription.plan_label|upper }} {% trans "ACTIVE" %}</div>
+    <div class="plan-name">{{ subscription.plan_label }}</div>
+
+    {% if subscription.cancel_at_period_end %}
+    <div class="alert-box alert-warn">
+      ⚠ {% trans "This subscription will not renew. You keep access until the end of the period." %}
+    </div>
+    {% endif %}
+
+    {% if subscription.current_period_end %}
+    <div class="period-info">
+      {% if subscription.cancel_at_period_end or subscription.payment_provider == 'cryptomus' %}{% trans "Access until" %}{% else %}{% trans "Renews on" %}{% endif %}:
+      <strong>{{ subscription.current_period_end|date:"N j, Y" }}</strong>
+      {% if subscription.days_left is not None %}
+      <span style="color:{% if subscription.days_left <= 5 %}var(--amber){% else %}var(--muted){% endif %}">
+        · {% blocktrans count n=subscription.days_left %}{{ n }} day left{% plural %}{{ n }} days left{% endblocktrans %}
+      </span>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <hr class="plan-divider">
+    <div class="plan-feature yes">{% trans "Unlimited private repositories" %}</div>
+    <div class="plan-feature yes">{% trans "AI analysis on every issue" %}</div>
+    <div class="plan-feature yes">{% trans "Score history and trend" %}</div>
+    <div class="plan-feature yes">{% trans "PDF reports and one-click fix pull requests" %}</div>
+    {# Split, because the two are no longer on the same plan: the comment moved #}
+    {# to Pro for exposure, the dashboard stayed on Team. #}
+    <div class="plan-feature {% if subscription.is_pro %}yes{% else %}no{% endif %}">{% trans "Score comment on every pull request" %}</div>
+    <div class="plan-feature {% if subscription.is_team %}yes{% else %}no{% endif %}">{% trans "Organisation dashboard" %}</div>
+    <div class="plan-feature {% if subscription.is_compliance %}yes{% else %}no{% endif %}">{% trans "SOC 2 / ISO 27001 evidence and SBOM export" %}</div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px">
+      {% if not subscription.is_compliance %}
+      <a href="?period={{ period }}#plans" class="btn-pay btn-pay-crypto" style="flex:1;text-align:center;text-decoration:none">
+        {% trans "Change plan" %}
+      </a>
+      {% endif %}
+      {% if subscription.stripe_subscription_id and not subscription.cancel_at_period_end %}
+      <form method="POST" action="{% url 'cancel_subscription' %}" id="cancel-sub-form" style="flex:1">
+        {% csrf_token %}
+        <button type="submit" class="cancel-link" style="background:none;border:none;cursor:pointer;width:100%">
+          {% trans "Cancel subscription" %}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── USAGE ───────────────────────────────────────────────────────────── -->
+  {% if not subscription.is_pro %}
+  <div class="usage-bar-wrap" style="max-width:900px;margin:20px auto 0">
+    {% if repo_limit_hit %}
+    <div class="form-error" style="margin:0 0 16px">
+      {% blocktrans %}That would put you over {{ free_limit }} repositories. Remove another one first, or upgrade.{% endblocktrans %}
+    </div>
+    {% endif %}
+    {# One row per provider: the limit applies to each, so one summed bar read "6 / 3". #}
+    {% for row in repo_quota %}
+    <div style="margin-bottom:14px">
+      <div class="usage-label">
+        <span>{% blocktrans with provider=row.label %}Private {{ provider }} repositories used{% endblocktrans %}</span>
+        <span style="color:{% if row.used >= row.limit %}var(--red){% else %}var(--text){% endif %}">
+          {{ row.used }} / {{ row.limit }}
+        </span>
+      </div>
+      <div class="usage-bar">
+        <div class="usage-fill" style="width:{% widthratio row.used row.limit 100 %}%;background:{% if row.used >= row.limit %}var(--red){% elif row.used >= 2 %}var(--amber){% else %}var(--accent){% endif %}"></div>
+      </div>
+      {% if row.used >= row.limit %}
+      {# One sentence, one translation unit: split across three, Russian could not #}
+      {# put its comma where the language wants it. #}
+      <div class="usage-note">
+        {% blocktrans with url=row.url %}Full. <a href="{{ url }}">Remove a repository</a> to free a slot — the reports are kept — or upgrade below for unlimited.{% endblocktrans %}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+    <div style="display:flex;gap:20px;margin-top:12px;font-family:var(--mono);font-size:11px;color:var(--muted);flex-wrap:wrap">
+      <span>{% trans "AI reports left this month" %}: <strong style="color:var(--text)">{{ ai_credits_left }}</strong></span>
+      <span>{% trans "PDF exports left this month" %}: <strong style="color:var(--text)">{{ pdf_credits_left }}</strong></span>
+    </div>
+
+    {% if removed_repos %}
+    <div class="removed-strip">
+      <div class="removed-strip-h">{% trans "Removed repositories" %}</div>
+      <p class="removed-strip-sub">{% trans "These no longer count against your limit. Nothing was deleted — restoring one brings its score history back with it." %}</p>
+      {% for audit in removed_repos %}
+      <div class="removed-row">
+        <span class="removed-name">{{ audit.repo_display }}</span>
+        <span class="removed-meta">{{ audit.get_source_display }}</span>
+        {% if audit.score is not None %}<span class="removed-meta">{% blocktrans with score=audit.score %}last score {{ score }}{% endblocktrans %}</span>{% endif %}
+        <a class="removed-meta" href="{% url 'audit_detail' audit.id %}" style="text-decoration:underline">{% trans "report" %}</a>
+        <form method="POST" action="{% url 'restore_repo' %}">
+          {% csrf_token %}
+          <input type="hidden" name="source" value="{{ audit.source }}">
+          <input type="hidden" name="repo" value="{{ audit.repo_full_name }}">
+          <input type="hidden" name="next" value="{% url 'billing' %}">
+          <button type="submit" class="btn-restore">{% trans "restore" %}</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ── PLANS ───────────────────────────────────────────────────────────── -->
+  <div id="plans" style="max-width:900px;margin:34px auto 0">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:24px">
+      <a href="?period=monthly#plans" class="period-tab {% if period == 'monthly' %}on{% endif %}">{% trans "Monthly" %}</a>
+      <a href="?period=annual#plans" class="period-tab {% if period == 'annual' %}on{% endif %}">
+        {% trans "Annual" %} <span class="save-chip">−{{ annual_discount }}%</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="billing-grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr));max-width:1060px;margin:0 auto">
+    <div class="plan-card">
+      {% if not subscription.is_pro %}<div class="status-badge free"><span class="status-dot"></span> {% trans "CURRENT PLAN" %}</div>{% endif %}
+      <div class="plan-name">Free</div>
+      <div class="plan-price"><sup>$</sup>0 <span class="per">/ {% trans "forever" %}</span></div>
+      <div class="plan-desc">{% trans "Personal projects and a real look at the product" %}</div>
+      <hr class="plan-divider">
+      <div class="plan-feature yes">{% trans "Unlimited public repository scans" %}</div>
+      <div class="plan-feature yes">{{ free_limit }} {% trans "private repositories" %}</div>
+      <div class="plan-feature yes">{% trans "1 AI report + 1 PDF per month" %}</div>
+      <div class="plan-feature yes">{% trans "Score badge for your README" %}</div>
+      <div class="plan-feature no">{% trans "Score history and trend" %}</div>
+      <div class="pay-section">
+        <a href="{% url 'scan_index' %}" class="btn-pay btn-pay-contact" style="width:100%;text-align:center;text-decoration:none">
+          {% trans "Scan a repository" %} →
+        </a>
+      </div>
+    </div>
+
+    {% for plan in plans %}
+    <div class="plan-card {% if plan.key == 'pro' %}pro-card{% endif %}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <div class="plan-tag {% if plan.key == 'pro' %}green{% endif %}" style="margin-bottom:0">{{ plan.key|upper }}</div>
+        {% if plan.key == 'pro' %}
+        <span style="font-family:var(--mono);font-size: 11px;letter-spacing:.1em;text-transform:uppercase;color:#000;background:var(--accent);padding:2px 8px;border-radius:3px">★ {% trans "MOST POPULAR" %}</span>
+        {% endif %}
+        {% if plan.current %}
+        <span style="font-family:var(--mono);font-size: 11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);border:1px solid rgba(0,255,136,.3);padding:2px 8px;border-radius:3px">{% trans "CURRENT" %}</span>
+        {% endif %}
+      </div>
+      <div class="plan-name">{{ plan.key|capfirst }}</div>
+
+      {% if period == 'annual' %}
+      <div class="plan-price"><sup>$</sup>{{ plan.annual_per_month }} <span class="per">/ {% trans "month" %}</span></div>
+      <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:-8px;margin-bottom:8px">
+        {% blocktrans with total=plan.annual saving=plan.saving %}${{ total }} billed yearly · save ${{ saving }}{% endblocktrans %}
+      </div>
+      {% else %}
+      <div class="plan-price"><sup>$</sup>{{ plan.monthly }} <span class="per">/ {% trans "month" %}</span></div>
+      {% endif %}
+
+      <div class="plan-desc">
+        {% if plan.key == 'pro' %}{% trans "One engineer, every repository they own" %}
+        {% elif plan.key == 'team' %}{% trans "One organisation, seats included" %}
+        {% else %}{% trans "For the audit you already have a date for" %}{% endif %}
+      </div>
+      <hr class="plan-divider">
+
+      {% if plan.key == 'pro' %}
+        <div class="plan-feature yes">{% trans "Unlimited private repositories" %}</div>
+        <div class="plan-feature yes">{% trans "AI analysis on every issue" %}</div>
+        <div class="plan-feature yes">{% trans "Score history and trend" %}</div>
+        <div class="plan-feature yes">{% trans "PDF reports" %}</div>
+        <div class="plan-feature yes">{% trans "One-click fix as a pull request" %}</div>
+        <div class="plan-feature yes">{% trans "Re-audit on every push" %}</div>
+        <div class="plan-feature yes">{% trans "Score comment on every pull request" %}</div>
+      {% elif plan.key == 'team' %}
+        <div class="plan-feature yes">{% trans "Everything in Pro" %}</div>
+        <div class="plan-feature yes">{% trans "Organisation dashboard" %}</div>
+        <div class="plan-feature yes">{% trans "Weekly trend across all repositories" %}</div>
+        <div class="plan-feature yes">{% trans "GitLab self-hosted" %}</div>
+        <div class="plan-feature yes">{% trans "Seats included — priced per organisation" %}</div>
+      {% else %}
+        <div class="plan-feature yes">{% trans "Everything in Team" %}</div>
+        <div class="plan-feature yes">{% trans "SOC 2 and ISO 27001 control mapping" %}</div>
+        <div class="plan-feature yes">{% trans "Evidence export for auditors" %}</div>
+        <div class="plan-feature yes">{% trans "SBOM export (CycloneDX, SPDX)" %}</div>
+        <div class="plan-feature yes">{% trans "Full audit history retention" %}</div>
+      {% endif %}
+
+      {% comment %}
+        Card and crypto on every card, always, in the same weight. Both post to
+        a real checkout; when a provider cannot take that plan yet it says so on
+        the way back, which is one behaviour to understand instead of two.
+      {% endcomment %}
+      <div class="pay-section">
+        {% if plan.renews %}
+        <div class="plan-active">
+          <div class="plan-active-line">
+            <span class="plan-active-dot"></span>
+            {% trans "This is your plan" %}
+          </div>
+          <div class="plan-active-sub">
+            {% blocktrans with date=subscription.current_period_end|date:"M j, Y" %}Renews automatically on {{ date }}{% endblocktrans %}
+          </div>
+          <a href="#cancel" class="plan-active-cancel" onclick="document.getElementById('cancel-sub-form')?.scrollIntoView({behavior:'smooth'});return false">
+            {% trans "Cancel subscription" %}
+          </a>
+        </div>
+        {% elif early_access %}
+        <form method="POST" action="{% url 'early_access' %}" style="display:contents">
+          {% csrf_token %}
+          <input type="hidden" name="plan" value="{{ plan.key }}">
+          <input type="hidden" name="period" value="{{ period }}">
+          <button type="submit" class="btn-pay btn-pay-card">
+            {% blocktrans with price=plan.price %}Get early access — ${{ price }} launch price{% endblocktrans %}
+          </button>
+        </form>
+        <div style="font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:6px">{% trans "Paid plans open shortly. Leave your spot now: nothing is charged, and we email you on launch day." %}</div>
+        {% else %}
+        <form method="POST" action="{% url 'ls_checkout' %}" style="display:contents">
+          {% csrf_token %}
+          <input type="hidden" name="plan" value="{{ plan.key }}">
+          <input type="hidden" name="period" value="{{ period }}">
+          <button type="submit" class="btn-pay btn-pay-card">
+            <span class="pay-ico" aria-hidden="true">💳</span>
+            {% if plan.extendable %}{% blocktrans with price=plan.price %}Extend for ${{ price }} by card{% endblocktrans %}{% else %}{% blocktrans with price=plan.price %}Pay ${{ price }} by card{% endblocktrans %}{% endif %}
+          </button>
+        </form>
+        <form method="POST" action="{% url 'crypto_checkout' %}" style="display:contents">
+          {% csrf_token %}
+          <input type="hidden" name="plan" value="{{ plan.key }}">
+          <input type="hidden" name="period" value="{{ period }}">
+          <button type="submit" class="btn-pay btn-pay-crypto">
+            <span class="pay-ico crypto-icon" aria-hidden="true">₿</span>
+            {% if plan.extendable %}{% blocktrans with price=plan.price %}Extend for ${{ price }} in crypto{% endblocktrans %}{% else %}{% blocktrans with price=plan.price %}Pay ${{ price }} in crypto{% endblocktrans %}{% endif %}
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Trust signals -->
+  <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-top:24px;flex-wrap:wrap">
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px">
+      <span style="color:var(--accent)">✓</span>
+      {% trans "Card details entered on Lemon Squeezy's servers" %}
+    </div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px">
+      <span style="color:var(--accent)">✓</span> {% trans "Cancel anytime" %}
+    </div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px">
+      <span style="color:var(--accent)">✓</span> {% trans "Instant activation" %}
+    </div>
+    {% if payment_mode == 'test' and user.is_staff %}
+    <div style="font-family:var(--mono);font-size: 11.5px;color:var(--amber);display:flex;align-items:center;gap:6px;padding:3px 10px;border:1px solid rgba(255,170,0,.2);border-radius:3px">
+      ⚡ {% trans "TEST MODE — no real charges" %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── FAQ ────────────────────────────────────────────────────────────────── -->
+  <div style="max-width:760px;margin:48px auto 0">
+    <h2 style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text);letter-spacing:.1em;text-transform:uppercase;margin-bottom:24px">
+      // FAQ
+    </h2>
+    <div id="faq-list" style="display:flex;flex-direction:column;gap:8px">
+
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">
+          {% trans "What's included in the Pro plan?" %}
+          <span class="faq-arrow">▶</span>
+        </button>
+        <div class="faq-a">
+          <div class="faq-a-inner">
+            {% trans "Pro covers unlimited private repositories on GitHub and GitLab, AI analysis with a code example for each issue, score history, PDF reports, one-click fixes opened as pull requests, and a re-audit on every push. Team adds the organisation dashboard and a score comment on every pull request. Compliance adds SOC 2 and ISO 27001 control mapping, auditor evidence export and SBOM output." %}
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">
+          {% trans "How do I cancel my subscription?" %}
+          <span class="faq-arrow">▶</span>
+        </button>
+        <div class="faq-a">
+          <div class="faq-a-inner">
+            {% trans "Cancel at any time via Plan & Payments — click «Cancel subscription». Pro access continues until the end of the paid period. No refunds for unused time." %}
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">
+          {% trans "Refund policy" %}
+          <span class="faq-arrow">▶</span>
+        </button>
+        <div class="faq-a">
+          <div class="faq-a-inner">
+            {% trans "We offer a refund within 48 hours of the first payment if you experience technical issues we were unable to resolve. Contact support with a description of the problem. Refunds after 48 hours or when the service has been actively used are not available." %}
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">
+          {% trans "How does AI analysis work?" %}
+          <span class="faq-arrow">▶</span>
+        </button>
+        <div class="faq-a">
+          <div class="faq-a-inner">
+            {% trans "After the audit, AI automatically analyzes each issue and suggests specific advice with a code example. Supported providers: Anthropic Claude, OpenAI GPT, and Google Gemini. You can connect your own API key in settings or use the built-in one." %}
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">
+          {% trans "Is it safe to store GitHub / GitLab tokens?" %}
+          <span class="faq-arrow">▶</span>
+        </button>
+        <div class="faq-a">
+          <div class="faq-a-inner">
+            {% trans "Access tokens are encrypted at rest with a key held outside the database, and are used only to read repository files. Repository code is never stored — only the check results. You can revoke a token at any time in your GitHub or GitLab settings." %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleFaq(btn) {
+  const open = btn.classList.toggle('open');
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  btn.nextElementSibling.classList.toggle('open', open);
+}
+
+</script>
+{% endblock %}

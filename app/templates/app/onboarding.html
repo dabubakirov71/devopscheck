@@ -1,0 +1,159 @@
+{% extends "app/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Welcome" %} — DevOpsCheck{% endblock %}
+
+{% block extra_style %}
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .steps-bar { flex-wrap: wrap; gap: 8px; }
+  .onboard-logo { margin-bottom: 26px; }
+  .step-cards { gap: 10px; }
+}
+
+.onboard-wrap { max-width: 560px; margin: 0 auto; padding: 60px 24px; text-align: center; }
+.onboard-logo { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: .1em; margin-bottom: 40px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.onboard-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: blink 3s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+.onboard-title { font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -.02em; margin-bottom: 12px; }
+.onboard-sub { font-size: 14px; color: var(--muted); margin-bottom: 48px; line-height: 1.6; }
+
+.steps-bar { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 48px; }
+.step-num {
+  width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--muted);
+  transition: all .3s; flex-shrink: 0;
+}
+.step-num.done { background: var(--accent); border-color: var(--accent); color: #000; }
+.step-num.active { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 12px rgba(0,255,136,.3); }
+.step-line { flex: 1; height: 1px; background: var(--border); max-width: 60px; }
+.step-line.done { background: var(--accent); }
+
+.step-cards { display: flex; flex-direction: column; gap: 12px; text-align: left; }
+.step-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 20px 22px; display: flex; align-items: flex-start; gap: 16px;
+  cursor: pointer; transition: border-color .15s, background .15s;
+}
+.step-card:hover { border-color: var(--border2); background: var(--surface2); }
+.step-card.done { border-color: rgba(0,255,136,.2); background: rgba(0,255,136,.03); }
+.step-card-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+.step-card-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.step-card-desc { font-size: 12px; color: var(--muted); line-height: 1.55; }
+.step-card-badge { font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 3px; margin-left: auto; flex-shrink: 0; align-self: start; }
+.badge-done { background: rgba(0,255,136,.1); color: var(--accent); border: 1px solid rgba(0,255,136,.2); }
+.badge-todo { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+
+.btn-skip {
+  background: none; border: none; color: var(--muted); font-size: 12px; cursor: pointer;
+  font-family: var(--sans); margin-top: 24px; transition: color .15s;
+}
+.btn-skip:hover { color: var(--text); }
+.btn-accent {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--accent); color: #000; font-family: var(--mono); font-size: 12px;
+  font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  padding: 10px 24px; border-radius: 5px; border: none; cursor: pointer;
+  transition: background .15s, transform .1s; margin-top: 28px;
+}
+.btn-accent:hover { background: var(--accent2); transform: translateY(-1px); }
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 11.5px; font-weight: 600; letter-spacing: .05em;
+  color: var(--text); border: 1px solid var(--border2); border-radius: 5px;
+  padding: 10px 22px; margin-top: 12px; transition: all .15s;
+}
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,255,136,.05); }
+{% endblock %}
+
+{% block content %}
+<div class="onboard-wrap">
+  <div class="onboard-logo">
+    <div class="onboard-dot"></div>
+    DEVOPSCHECK
+  </div>
+
+  <h1 class="onboard-title">{% trans "Welcome" %}</h1>
+  <p class="onboard-sub">{% trans "Three steps to your first report. You can also scan any public repository right now without connecting anything." %}</p>
+
+  <!-- Steps progress bar -->
+  <div class="steps-bar">
+    <div class="step-num {% if has_github or has_gitlab %}done{% else %}active{% endif %}">{% if has_github or has_gitlab %}✓{% else %}1{% endif %}</div>
+    <div class="step-line {% if has_github or has_gitlab %}done{% endif %}"></div>
+    <div class="step-num {% if has_github or has_gitlab %}active{% endif %}">2</div>
+    <div class="step-line"></div>
+    <div class="step-num">3</div>
+  </div>
+
+  <div class="step-cards">
+    <!-- Step 1: Connect repo -->
+    <div class="step-card {% if has_github or has_gitlab %}done{% endif %}"
+         onclick="window.location='{% url 'connect' %}'">
+      <div class="step-card-icon">{% if has_github or has_gitlab %}✅{% else %}🔗{% endif %}</div>
+      <div>
+        <div class="step-card-title">{% trans "Connect GitHub or GitLab" %}</div>
+        <div class="step-card-desc">{% if github_app_enabled %}{% trans "Install the GitHub App in one click, or paste a personal access token. Read access is enough to audit; opening fix pull requests needs write. GitLab is supported through a token, including self-hosted instances." %}{% else %}{% trans "Sign in with GitHub, or paste a personal access token. Read access is enough to audit; opening fix pull requests needs write. GitLab, including self-hosted, connects with a token." %}{% endif %}</div>
+      </div>
+      <span class="step-card-badge {% if has_github or has_gitlab %}badge-done{% else %}badge-todo{% endif %}">
+        {% if has_github or has_gitlab %}DONE{% else %}TODO{% endif %}
+      </span>
+    </div>
+
+    <!-- Step 2: Select repo -->
+    <div class="step-card"
+         onclick="{% if has_github %}window.location='{% url 'dashboard' %}'{% elif has_gitlab %}window.location='{% url 'gitlab_dashboard' %}'{% else %}window.location='{% url 'connect' %}'{% endif %}">
+      <div class="step-card-icon">📁</div>
+      <div>
+        <div class="step-card-title">{% trans "Pick a repository" %}</div>
+        <div class="step-card-desc">{% trans "Open the dashboard and choose any repository from your list." %}</div>
+      </div>
+      <span class="step-card-badge badge-todo">TODO</span>
+    </div>
+
+    <!-- Step 3: Start audit -->
+    <div class="step-card"
+         onclick="{% if has_github %}window.location='{% url 'dashboard' %}'{% elif has_gitlab %}window.location='{% url 'gitlab_dashboard' %}'{% else %}window.location='{% url 'connect' %}'{% endif %}">
+      <div class="step-card-icon">🚀</div>
+      <div>
+        <div class="step-card-title">{% trans "Run the audit" %}</div>
+        <div class="step-card-desc">{% trans "The scan takes a few seconds and returns a score, every failed check, and a ready-to-use fix for the ones that have one." %}</div>
+      </div>
+      <span class="step-card-badge badge-todo">TODO</span>
+    </div>
+  </div>
+
+  {% if has_github %}
+  <a href="{% url 'dashboard' %}" class="btn-accent">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+    {% trans "Go to repositories" %}
+  </a>
+  {% elif has_gitlab %}
+  <a href="{% url 'gitlab_dashboard' %}" class="btn-accent">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+    {% trans "Go to repositories" %}
+  </a>
+  {% else %}
+  <a href="{% url 'connect' %}" class="btn-accent">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+    {% trans "Connect a repository" %}
+  </a>
+  {% endif %}
+
+  {% comment %}
+    The lede already promises a scan with nothing connected, and there was no
+    way to take it. Handing over a token is a bigger ask than looking at one
+    report, so the no-commitment path belongs on this page.
+  {% endcomment %}
+  <a href="{% url 'scan_index' %}" class="btn-outline">
+    {% trans "Or scan a public repository first" %} →
+  </a>
+
+  <div>
+    <form method="post" action="{% url 'onboarding_complete' %}" style="display:inline">
+      {% csrf_token %}
+      <button type="submit" class="btn-skip">{% trans "Skip" %} →</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

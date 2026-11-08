@@ -1,0 +1,25 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<style>.m td,.m th{padding:4px 8px;text-align:right;border-bottom:1px solid #ddd}.m th:first-child,.m td:first-child{text-align:left}.m{margin-bottom:28px;border-collapse:collapse}h2{margin-top:18px}</style>
+<p>Public reports: <b>{{ public_total }}</b> · Fix PRs merged: <b>{{ fix_merge }}</b> · Early-access requests: <b>{{ plan_interest }}</b> · False-positive reports: <b>{{ false_positives }}</b></p>
+
+<h2>Funnel, last 30 days</h2>
+<table class="m"><tr><th>Step</th><th>Events</th><th>From previous</th></tr>
+{% for name, n, rate in steps %}<tr><td>{{ name }}</td><td>{{ n }}</td><td>{{ rate }}</td></tr>{% endfor %}
+</table>
+
+<h2>By week</h2>
+<div style="overflow-x:auto"><table class="m"><tr><th>Week of</th>{% for e in events %}<th>{{ e }}</th>{% endfor %}</tr>
+{% for week, counts in table %}<tr><td>{{ week }}</td>{% for n in counts %}<td>{{ n }}</td>{% endfor %}</tr>{% empty %}<tr><td colspan="13">No events yet.</td></tr>{% endfor %}
+</table></div>
+
+<h2>Sources, last 30 days (first touch)</h2>
+<table class="m"><tr><th>Source</th><th>Landing visits</th><th>Scans</th><th>Sign-ups</th><th>Paid</th></tr>
+{% for s in sources %}<tr><td>{{ s.source }}</td><td>{{ s.visits }}</td><td>{{ s.scans }}</td><td>{{ s.signups }}</td><td>{{ s.paid }}</td></tr>{% empty %}<tr><td colspan="5">No attributed events yet.</td></tr>{% endfor %}
+</table>
+
+<h2>Most viewed public reports</h2>
+<table class="m"><tr><th>Repository</th><th>Views</th><th>Score</th></tr>
+{% for s in top_scans %}<tr><td>{{ s.repo_full_name }}</td><td>{{ s.view_count }}</td><td>{{ s.score }}</td></tr>{% endfor %}
+</table>
+{% endblock %}

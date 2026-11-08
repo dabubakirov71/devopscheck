@@ -1,0 +1,21 @@
+{% extends "app/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Connect GitLab" %} — DevOpsCheck{% endblock %}
+{% block content %}
+<div class="container" style="text-align:center;padding:80px 24px">
+  <div style="font-size:32px;margin-bottom:16px">🦊</div>
+  <h2 style="font-size:20px;font-weight:400;margin-bottom:8px">{% trans "Connect your GitLab" %}</h2>
+  <p style="color:var(--muted);font-size:13px;margin-bottom:32px">
+    {% trans "Create an OAuth App on GitLab and add the keys to .env," %}<br>
+    {% trans "then sign in with GitLab." %}
+  </p>
+  <a href="{% url 'gitlab_login' %}" style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:#fc6d26;color:#fff;border-radius:6px;font-size:14px;font-weight:500">
+    {% trans "Sign in with GitLab" %} →
+  </a>
+  <div style="margin-top:24px;font-size:12px;color:var(--muted)">
+    {% trans "You need to create an App at" %} <a href="https://gitlab.com/-/user_settings/applications" target="_blank" style="color:var(--blue)">gitlab.com/-/user_settings/applications</a><br>
+    Redirect URI: <code style="font-family:var(--mono)">http://localhost:8000/auth/gitlab/callback/</code><br>
+    Scopes: <code style="font-family:var(--mono)">read_user, read_api</code>
+  </div>
+</div>
+{% endblock %}

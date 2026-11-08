@@ -1,0 +1,29 @@
+{% extends "app/auth_base.html" %}
+{% load i18n %}
+{% comment %}
+  allauth's own page for a failed OAuth round trip is an unstyled "Third-Party
+  Login Failure". Say what usually causes it and give a way back.
+{% endcomment %}
+{% block title %}{% trans "Sign-in failed" %}{% endblock %}
+{% block extra_style %}
+    .reasons { font-size: 13px; line-height: 1.6; color: var(--text); padding-left: 18px; margin-bottom: 16px; }
+    .reasons li { margin-bottom: 6px; }
+    .btn-submit { display: block; text-align: center; }
+{% endblock %}
+{% block card %}
+<div class="card">
+  <div class="card-head">
+    <div class="card-eyebrow">{% trans "// sign in" %}</div>
+    <div class="card-title">{% trans "Sign-in did not go through" %}</div>
+    <div class="card-sub">{% trans "The provider sent you back without letting us finish signing you in. Nothing was changed in your account." %}</div>
+  </div>
+  <div class="card-body">
+    <ul class="reasons">
+      <li>{% trans "The sign-in page was open too long, or was opened twice in different tabs. Starting again usually fixes it." %}</li>
+      <li>{% trans "Access was declined on the provider's page." %}</li>
+      <li>{% trans "If it keeps happening, sign in with email and password, and write to us — we will look into it." %}</li>
+    </ul>
+    <a href="{% url 'login' %}" class="btn-submit">{% trans "Try again" %} →</a>
+  </div>
+</div>
+{% endblock %}

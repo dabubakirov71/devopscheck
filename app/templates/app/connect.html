@@ -1,0 +1,1597 @@
+{% extends "app/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Profile" %} — DevOpsCheck{% endblock %}
+
+{% block extra_style %}
+.btn-app-install {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  text-decoration: none; margin-bottom: 10px;
+}
+.install-note { font-size: 12px; color: var(--muted); line-height: 1.55; margin-bottom: 16px; }
+.or-divider {
+  display: flex; align-items: center; gap: 12px; margin: 0 0 16px;
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--dim);
+}
+.or-divider::before, .or-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ── Page header ─────────────────────────────────────────────────
+   The page used to open straight into a sidebar card with no title, so it
+   read as a fragment rather than a screen. */
+.pf-hdr { margin-bottom: 26px; }
+.pf-eyebrow {
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+}
+.pf-h1 { font-size: 28px; font-weight: 700; letter-spacing: -.025em; color: #f0f8ff; margin-bottom: 8px; }
+.pf-lede { font-size: 14px; color: var(--muted); max-width: 62ch; line-height: 1.65; }
+
+/* ── Layout ──────────────────────────────────────────────────── */
+.profile-wrap { padding-top: 28px; }
+.profile-layout {
+  display: grid; grid-template-columns: 300px 1fr;
+  gap: 26px; align-items: start;
+}
+
+/* ── Left column: separate cards, not one long stack ─────────── */
+.pf-left { position: sticky; top: 76px; display: flex; flex-direction: column; gap: 12px; }
+.pf-sec {
+  padding: 18px 20px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+}
+.pf-sec > *:last-child { margin-bottom: 0; }
+
+.pf-avatar-wrap { display: flex; align-items: center; gap: 14px; }
+.pf-avatar {
+  width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0;
+  background: linear-gradient(140deg, rgba(0,255,136,.16), rgba(68,136,255,.07));
+  border: 1px solid rgba(0,255,136,.3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 21px; font-weight: 700; color: var(--accent);
+  letter-spacing: -.02em;
+}
+.pf-user-name { font-size: 15px; font-weight: 700; color: #e8f4ff; letter-spacing: -.01em; margin-bottom: 3px; }
+.pf-user-email { font-size: 12px; color: var(--muted); word-break: break-all; line-height: 1.4; }
+.pf-user-joined { font-family: var(--mono); font-size: 11.5px; color: var(--dim); margin-top: 4px; }
+
+.pf-sub-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 11.5px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 99px; margin-bottom: 10px;
+}
+.pf-sub-badge.pro  { background: rgba(0,255,136,.1); color: var(--accent); border: 1px solid rgba(0,255,136,.25); }
+.pf-sub-badge.free { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+.pf-sub-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.pf-sub-badge.pro .pf-sub-dot { animation: sub-pulse 1.8s ease-in-out infinite; }
+@keyframes sub-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(0,255,136,.5); }
+  50% { box-shadow: 0 0 0 5px rgba(0,255,136,0); }
+}
+.pf-sub-until { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.pf-sub-until strong { color: var(--text); }
+.pf-sub-cancel { font-size: 12px; color: var(--amber); margin-bottom: 10px; }
+
+.usage-bar-wrap { margin: 8px 0 12px; }
+.usage-bar-hdr { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-bottom: 5px; }
+.usage-bar-bg { height: 3px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.usage-bar-fill { height: 100%; border-radius: 99px; transition: width .4s; }
+
+.btn-upgrade {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; padding: 9px 12px;
+  background: var(--accent); color: var(--bg);
+  font-family: var(--sans); font-size: 13px; font-weight: 600;
+  border: none; border-radius: 5px; cursor: pointer;
+  text-decoration: none; transition: all .15s;
+}
+.btn-upgrade:hover { filter: brightness(1.1); box-shadow: 0 0 20px rgba(0,255,136,.2); }
+
+.pf-manage-link {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  text-decoration: none; transition: color .15s; margin-top: 6px;
+}
+.pf-manage-link:hover { color: var(--accent); }
+
+.pf-acct-lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
+.pf-acct-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 5px; margin-bottom: 6px;
+}
+.pf-acct-item:last-child { margin-bottom: 0; }
+.pf-acct-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.pf-acct-icon { width: 24px; height: 24px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.pf-acct-name { font-size: 12px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-acct-url { font-family: var(--mono); font-size: 11.5px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-acct-btns { display: flex; gap: 4px; flex-shrink: 0; margin-left: 8px; }
+.pf-acct-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; font-family: var(--mono); font-size: 11px;
+  border: 1px solid var(--border2); border-radius: 3px;
+  background: transparent; cursor: pointer; transition: all .15s;
+  color: var(--muted); text-decoration: none;
+}
+.pf-acct-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pf-acct-btn.del:hover { border-color: var(--red); color: var(--red); background: rgba(255,68,102,.06); }
+.pf-acct-empty { font-size: 12px; color: var(--text); text-align: center; padding: 10px 4px; line-height: 1.6; }
+
+.pf-bottom { padding: 4px 20px 8px; display: flex; flex-direction: column; }
+.pf-bottom-link {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  text-decoration: none; padding: 8px 0; transition: color .15s;
+  border-top: 1px solid var(--border);
+}
+.pf-bottom-link:first-child { border-top: none; }
+.pf-bottom-link:hover { color: var(--text); }
+.pf-bottom-link.danger { color: rgba(255,68,102,.65); }
+.pf-bottom-link.danger:hover { color: var(--red); }
+.pf-bottom-link svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+/* ── Right column ─────────────────────────────────────────────── */
+.pf-right { min-width: 0; }
+
+/* A segmented control rather than 10px uppercase text on a hairline —
+   the old bar gave no sense that it could be pressed. */
+.tab-nav {
+  display: flex; gap: 4px; margin-bottom: 22px; overflow-x: auto;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 9px; padding: 5px; scrollbar-width: none;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+.tab-btn {
+  padding: 9px 16px; flex: 1; flex-shrink: 0; min-height: 38px;
+  font-family: var(--sans); font-size: 12.5px; font-weight: 600;
+  letter-spacing: .01em; color: var(--muted); background: transparent;
+  border: none; border-radius: 6px;
+  cursor: pointer; transition: background .15s, color .15s; white-space: nowrap;
+}
+.tab-btn.active { color: var(--bg); background: var(--accent); }
+.tab-btn:hover:not(.active) { color: var(--text); background: var(--surface2); }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* Section card */
+.pf-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; overflow: hidden; margin-bottom: 16px;
+}
+.pf-card:last-child { margin-bottom: 0; }
+.pf-card-hdr {
+  padding: 10px 16px; background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 11.5px; color: var(--muted);
+  letter-spacing: .12em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 6px;
+}
+.pf-card-hdr::before { content: '//'; color: var(--accent); }
+.pf-card-body { padding: 20px; }
+
+/* A provider connection that needs a new token.
+   Amber, not red: an expired PAT is maintenance, and the red in this product
+   means a committed secret. Spending the alarm colour on routine upkeep is how
+   people stop reading it. */
+.conn-notice {
+  max-width: 1040px; margin: 0 auto 22px; padding: 14px 16px;
+  display: grid; grid-template-columns: 18px 1fr auto; gap: 0 13px; align-items: start;
+  border: 1px solid var(--border2); border-left: 3px solid var(--amber);
+  background: var(--surface); border-radius: 8px;
+}
+.conn-notice-icon { width: 18px; height: 18px; color: var(--amber); margin-top: 1px; }
+.conn-notice-body { min-width: 0; }
+.conn-notice-lede {
+  margin: 0 0 8px; font-size: 13.5px; line-height: 1.55; color: var(--text);
+}
+.conn-notice-list { list-style: none; margin: 0; padding: 0; }
+.conn-notice-list li {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
+  padding: 4px 0; font-size: 12.5px; line-height: 1.5;
+}
+.conn-notice-name { font-weight: 600; color: var(--text); }
+.conn-notice-why { color: var(--muted); min-width: 0; }
+.conn-notice-since {
+  font-family: var(--mono); font-size: 11px; color: var(--dim); white-space: nowrap;
+}
+.conn-notice-link {
+  font-size: 12px; color: var(--amber); text-decoration: none;
+  border-bottom: 1px solid rgba(255,170,0,.35); white-space: nowrap;
+}
+.conn-notice-link:hover { border-bottom-color: var(--amber); }
+.conn-notice-cta {
+  cursor: pointer; background: transparent;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 36px; padding: 7px 15px; align-self: center;
+  font-family: var(--mono); font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
+  border: 1px solid var(--border2); border-radius: 5px; color: var(--text);
+  text-decoration: none; white-space: nowrap; transition: all .15s;
+}
+.conn-notice-cta:hover { border-color: var(--amber); color: var(--amber); background: rgba(255,170,0,.06); }
+@media (max-width: 640px) {
+  .conn-notice { grid-template-columns: 18px 1fr; }
+  .conn-notice-cta { grid-column: 2; justify-self: start; margin-top: 10px; }
+}
+
+.ci-lede { font-size: 12.5px; color: var(--muted); line-height: 1.65; margin-bottom: 12px; }
+.ci-snippet {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 12px 14px; margin-bottom: 12px; overflow-x: auto;
+}
+.ci-snippet code {
+  font-family: var(--mono); font-size: 11.5px; line-height: 1.7;
+  color: var(--text); white-space: pre;
+}
+.ci-note { font-size: 12px; color: var(--dim); line-height: 1.65; margin: 0; }
+
+/* Inline messages */
+.inline-msg {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 5px;
+  font-size: 12px; margin-bottom: 16px;
+}
+.inline-msg.ok  { background: rgba(0,255,136,.07); border: 1px solid rgba(0,255,136,.2); color: var(--accent); }
+.inline-msg.err { background: rgba(255,68,102,.07); border: 1px solid rgba(255,68,102,.2); color: var(--red); }
+
+/* ── Connect tab: side-by-side cards ─────────────────────────── */
+.connect-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: stretch; }
+.connect-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.connect-card-hdr {
+  padding: 13px 18px; background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 9px;
+  font-family: var(--mono); font-size: 12.5px; font-weight: 600;
+  color: var(--text); letter-spacing: .04em;
+}
+/* Cards used to end at different heights because one had a scopes box and the
+   other did not, which left the two connect buttons on different lines. */
+.connect-card-body { padding: 18px; display: flex; flex-direction: column; flex: 1; }
+.connect-card-body > form:last-child, .connect-card-body > .btn-connect:last-child { margin-top: auto; }
+.connect-card-body form .btn-connect { margin-top: 14px; }
+
+.connect-status-ok {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 12px; background: rgba(0,255,136,.06);
+  border: 1px solid rgba(0,255,136,.15); border-radius: 6px;
+  margin-bottom: 12px;
+}
+.connect-status-icon {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(0,255,136,.12);
+  display: flex; align-items: center; justify-content: center;
+}
+.connect-status-name { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--accent); }
+/* Same card, amber, for an account whose token needs replacing. Leaving the
+   green tick on a connection that has stopped working contradicts the notice
+   at the top of the page and teaches people to ignore both. */
+.connect-status-ok.needs-token { background: rgba(255,170,0,.05); border-color: rgba(255,170,0,.2); }
+.connect-status-ok.needs-token .connect-status-icon { background: rgba(255,170,0,.14); color: var(--amber); }
+.connect-status-ok.needs-token .connect-status-name { color: var(--amber); }
+.connect-hint {
+  font-size: 12px; line-height: 1.6; color: var(--muted);
+  padding: 9px 12px; margin-bottom: 14px;
+  border: 1px dashed var(--border2); border-radius: 6px;
+}
+.connect-status-url  { font-family: var(--mono); font-size: 11.5px; color: var(--dim); margin-top: 1px; }
+
+.scopes-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; margin-bottom: 14px; }
+.scopes-title { font-family: var(--mono); font-size: 11px; color: var(--dim); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 6px; }
+.scope-item { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+.scope-item::before { content: '✓'; color: var(--accent); font-size: 11.5px; }
+
+.adv-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 13px; color: var(--muted);
+  background: none; border: 1px solid var(--border2); cursor: pointer;
+  padding: 6px 14px; border-radius: 4px; margin-bottom: 12px;
+  transition: color .15s, border-color .15s; letter-spacing: .06em;
+}
+.adv-toggle:hover { color: var(--text); border-color: var(--accent); }
+.adv-icon { font-size: 11px; transition: transform .2s; display: inline-block; }
+.adv-toggle.open .adv-icon { transform: rotate(180deg); }
+/* Smooth collapse via max-height */
+.adv-body { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+.adv-body.open { max-height: 900px; }
+
+/* ── Platform connect buttons ─────────────────────────────── */
+.btn-connect {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; padding: 12px 14px; min-height: 44px;
+  font-family: var(--mono); font-size: 11.5px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase;
+  border-radius: 6px; cursor: pointer; background: transparent;
+  transition: all .15s; text-decoration: none; border-style: solid; border-width: 1px;
+}
+.btn-connect-gh { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.btn-connect-gh:hover { background: var(--accent2); border-color: var(--accent2); box-shadow: 0 0 22px rgba(0,255,136,.18); }
+.btn-connect-gl { border-color: rgba(252,109,38,.5); color: #fc6d26; }
+.btn-connect-gl:hover { background: rgba(252,109,38,.07); border-color: #fc6d26; box-shadow: 0 0 18px rgba(252,109,38,.1); }
+
+/* ── AI settings tab ─────────────────────────────────────────── */
+.ai-provider-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+.ai-radio-label {
+  display: block; padding: 14px 12px; text-align: center;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; cursor: pointer; transition: all .15s;
+  position: relative;
+}
+.ai-radio-label:hover { border-color: var(--border2); background: var(--surface); }
+.ai-radio-label.selected { border-color: var(--accent); background: rgba(0,255,136,.05); }
+.ai-radio-input { display: none; }
+.ai-provider-logo {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 8px; font-size: 16px; font-weight: 700;
+  font-family: var(--mono);
+}
+.ai-logo-gemini  { background: rgba(66,133,244,.12); color: #4285f4; }
+.ai-logo-claude  { background: rgba(200,140,90,.12); color: #c88c5a; }
+.ai-logo-openai  { background: rgba(16,163,127,.12); color: #10a37f; }
+.ai-provider-name { font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: var(--text); letter-spacing: .04em; }
+.ai-provider-desc { font-size: 11.5px; color: var(--dim); margin-top: 3px; }
+.ai-selected-check {
+  position: absolute; top: 6px; right: 6px; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--accent);
+  display: none; align-items: center; justify-content: center;
+}
+.ai-radio-label.selected .ai-selected-check { display: flex; }
+
+.key-input-row { position: relative; }
+.key-input-row .form-input { padding-right: 44px; font-family: var(--mono); }
+.key-eye-btn {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; color: var(--muted);
+  font-size: 14px; display: flex; align-items: center; transition: color .15s;
+}
+.key-eye-btn:hover { color: var(--text); }
+
+/* ── Notifications & API tab ─────────────────────────────────── */
+.notif-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 4px 0 16px;
+}
+.notif-row-text { flex: 1; }
+.notif-row-title { font-size: 13px; color: var(--text); font-weight: 500; margin-bottom: 3px; }
+.notif-row-hint  { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+/* Toggle switch */
+.ts-btn {
+  position: relative; width: 40px; height: 22px;
+  border: none; padding: 0; background: none; cursor: pointer; flex-shrink: 0;
+}
+.ts-track {
+  position: absolute; inset: 0; border-radius: 22px;
+  background: var(--surface2); border: 1px solid var(--border2); transition: all .2s;
+}
+.ts-btn.on .ts-track { background: rgba(0,255,136,.16); border-color: rgba(0,255,136,.4); }
+.ts-thumb {
+  position: absolute; top: 4px; left: 4px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--muted); transition: transform .2s, background .2s; pointer-events: none;
+}
+.ts-btn.on .ts-thumb { transform: translateX(18px); background: var(--accent); }
+
+.code-input-row { display: flex; gap: 8px; align-items: stretch; }
+.code-input {
+  flex: 1; font-family: var(--mono); font-size: 11px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 4px; padding: 8px 12px; min-width: 0;
+}
+.code-input:focus { outline: none; border-color: var(--border2); }
+.code-input[readonly] { cursor: text; }
+
+.copy-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 0 12px; height: 36px; flex-shrink: 0;
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted); background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 4px; cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+.copy-btn.copied { color: var(--accent); border-color: rgba(0,255,136,.3); }
+
+.eye-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; flex-shrink: 0;
+  font-size: 14px; color: var(--muted);
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 4px; cursor: pointer; transition: all .15s;
+}
+.eye-btn:hover { border-color: var(--border2); color: var(--text); }
+
+.api-docs-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 11.5px; color: var(--muted);
+  background: none; border: none; cursor: pointer; padding: 8px 0 4px;
+  transition: color .15s; letter-spacing: .06em;
+}
+.api-docs-toggle:hover { color: var(--text); }
+.api-docs-body { display: none; }
+.api-docs-body.open {
+  display: block; margin-top: 10px; padding: 12px 14px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 5px;
+}
+.api-line { font-family: var(--mono); font-size: 11px; color: var(--muted); padding: 3px 0; display: flex; align-items: center; gap: 8px; }
+.api-method { font-size: 11px; padding: 2px 6px; border-radius: 3px; font-weight: 600; flex-shrink: 0; }
+.api-method.get  { background: rgba(0,255,136,.1); color: var(--accent); }
+.api-method.post { background: rgba(68,136,255,.1); color: #6699ff; }
+
+/* ── Security tab ─────────────────────────────────────────────── */
+.danger-card { border-color: rgba(255,68,102,.25); }
+.danger-card .pf-card-hdr { background: rgba(255,68,102,.05); border-color: rgba(255,68,102,.15); color: var(--red); }
+.danger-card .pf-card-hdr::before { color: var(--red); }
+
+/* Delete modal */
+.del-modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,.78); backdrop-filter: blur(6px);
+  align-items: center; justify-content: center;
+}
+.del-modal-overlay.open { display: flex; }
+.del-modal {
+  background: var(--surface); border: 1px solid rgba(255,68,102,.3);
+  border-radius: 12px; padding: 28px; width: 92%; max-width: 420px;
+  position: relative; animation: modal-in .2s ease;
+}
+@keyframes modal-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+.del-modal-close { position: absolute; top: 12px; right: 12px; background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer; font-family: var(--mono); padding: 4px; border-radius: 4px; transition: color .15s; }
+.del-modal-close:hover { color: var(--text); }
+.del-modal-title { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--red); margin-bottom: 10px; }
+.del-modal-desc { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 20px; }
+/* Regen token modal */
+.regen-modal { border-color: rgba(255,255,255,.1); }
+.regen-modal-title { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+.regen-modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.btn-regen-cancel { flex: 1; padding: 9px; font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; background: transparent; border: 1px solid var(--border2); color: var(--muted); border-radius: 5px; cursor: pointer; transition: color .15s, border-color .15s; }
+.btn-regen-cancel:hover { color: var(--text); border-color: var(--text); }
+.btn-regen-confirm { flex: 1; padding: 9px; font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; background: transparent; border: 1px solid var(--red); color: var(--red); border-radius: 5px; cursor: pointer; transition: background .15s, box-shadow .15s; }
+.btn-regen-confirm:hover { background: rgba(255,68,102,.07); box-shadow: 0 0 14px rgba(255,68,102,.12); }
+
+/* ── Toast notifications ──────────────────────────────────────── */
+.toast-container {
+  position: fixed; bottom: 24px; right: 24px;
+  display: flex; flex-direction: column; gap: 8px;
+  z-index: 9999; pointer-events: none;
+}
+.toast {
+  padding: 10px 16px; border-radius: 6px;
+  font-size: 13px; font-family: var(--mono);
+  display: flex; align-items: center; gap: 8px;
+  pointer-events: auto; opacity: 1; transition: opacity .3s;
+  animation: toast-in .2s ease;
+}
+.toast.success { background: rgba(0,255,136,.12); border: 1px solid rgba(0,255,136,.3); color: var(--accent); }
+.toast.error   { background: rgba(255,68,102,.12); border: 1px solid rgba(255,68,102,.3); color: var(--red); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ── Mobile ───────────────────────────────────────────────────── */
+@media (max-width: 760px) {
+  .profile-layout { grid-template-columns: 1fr; }
+  .pf-left { position: static; }
+  .pf-h1 { font-size: 23px; }
+  .tab-nav { border-radius: 8px; }
+  .connect-cards { grid-template-columns: 1fr; }
+  .ai-provider-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 480px) {
+  .ai-provider-grid { grid-template-columns: 1fr 1fr; }
+  .tab-btn { padding: 9px 12px; font-size: 12px; flex: 0 0 auto; }
+}
+
+/* Touch targets. A pointer that is a fingertip needs a control it can hit:
+   the copy button was 12px tall, the section toggles 22-23px, both under the
+   24px floor and well under the 44px this product promised when it grew a
+   mobile layout. Inline links inside a sentence are left alone — the exemption
+   exists because padding them out breaks the line. */
+/* ── What leaves your repository ──────────────────────────────────────────
+   Plain words next to the switch that stops it. */
+.privacy-lede { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 10px; }
+.privacy-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.privacy-list li {
+  font-size: 12.5px; line-height: 1.6; color: var(--text);
+  padding-left: 22px; position: relative;
+}
+.privacy-list li::before {
+  position: absolute; left: 0; top: 0; font-family: var(--mono); font-size: 12px;
+}
+.privacy-list li.yes::before { content: '→'; color: var(--amber); }
+.privacy-list li.no::before  { content: '✕'; color: var(--accent); }
+.privacy-switch { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 16px; }
+.privacy-switch-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.privacy-switch-row > div { flex: 1; min-width: 220px; }
+.privacy-switch-title { font-size: 13.5px; color: var(--text); font-weight: 600; margin-bottom: 4px; }
+.privacy-switch-sub { font-size: 12px; color: var(--muted); line-height: 1.6; }
+@media (max-width: 560px) { .privacy-switch-row button { width: 100%; } }
+
+@media (pointer: coarse), (max-width: 700px) {
+  .pf-acct-btn { min-width: 40px; min-height: 40px; }
+  .adv-toggle { min-height: 44px; }
+  .btn-sm { min-height: 44px; }
+  .pf-manage-link { display: inline-flex; align-items: center; min-height: 44px; }
+  .tab-btn { min-height: 44px; }
+  /* "New token on <host>" is the way out of a broken connection — the one
+     control on this page a customer arrives specifically to press. */
+  .conn-notice-link { display: inline-flex; align-items: center; min-height: 40px; }
+}
+{% endblock %}
+
+{% block content %}
+<div class="container profile-wrap">
+
+<div class="pf-hdr">
+  <div class="pf-eyebrow">{% trans "account" %}</div>
+  <h1 class="pf-h1">{% trans "Profile and connections" %}</h1>
+  <p class="pf-lede">{% trans "Connect the accounts you want audited, choose which AI analyses your repositories, and manage notifications, the API token and your password." %}</p>
+</div>
+
+{% if broken_connections %}
+<div class="conn-notice" role="status">
+  <svg class="conn-notice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/>
+  </svg>
+  <div class="conn-notice-body">
+    <p class="conn-notice-lede">
+      {% blocktrans count n=broken_connections|length %}One account needs a new token — its audits are paused until then.{% plural %}{{ n }} accounts need a new token — their audits are paused until then.{% endblocktrans %}
+    </p>
+    <ul class="conn-notice-list">
+      {% for conn in broken_connections %}
+      <li>
+        <span class="conn-notice-name">{{ conn }}</span>
+        <span class="conn-notice-why">{{ conn.status_message }}</span>
+        {% comment %}
+          Straight to the instance that issued the token — gitlab.com for the
+          cloud, the customer's own host for a self-hosted one.
+        {% endcomment %}
+        <a class="conn-notice-link" href="{{ conn.token_page_url }}" target="_blank" rel="noopener">
+          {% blocktrans with host=conn.host %}New token on {{ host }}{% endblocktrans %} ↗
+        </a>
+        {% if conn.token_broken_since %}
+        <span class="conn-notice-since">{{ conn.token_broken_since|date:"j M, H:i" }}</span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  <button type="button" class="conn-notice-cta" onclick="goReconnect()">{% trans "Paste the new token" %} →</button>
+</div>
+{% endif %}
+
+<div class="profile-layout">
+
+  <!-- ── LEFT SIDEBAR ──────────────────────────────────────────── -->
+  <aside class="pf-left">
+
+    <!-- User info -->
+    <div class="pf-sec">
+      <div class="pf-avatar-wrap">
+        <div class="pf-avatar">{{ user.username|first|upper }}</div>
+        <div style="min-width:0">
+          <div class="pf-user-name">{{ user.username }}</div>
+          {% if user.email %}<div class="pf-user-email">{{ user.email }}</div>{% endif %}
+          <div class="pf-user-joined">{% trans "since" %} {{ user.date_joined|date:"M j, Y" }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subscription -->
+    <div class="pf-sec">
+      {% if subscription.is_pro %}
+        <div class="pf-sub-badge pro"><span class="pf-sub-dot"></span> {{ subscription.plan_label|upper }}</div>
+        {% if subscription.cancel_at_period_end %}
+          <div class="pf-sub-cancel">⚠ {% trans "Cancels" %} {{ subscription.current_period_end|date:"M j, Y" }}</div>
+        {% elif subscription.current_period_end %}
+          <div class="pf-sub-until">{% trans "until" %} <strong>{{ subscription.current_period_end|date:"M j, Y" }}</strong></div>
+        {% endif %}
+        <a href="{% url 'billing' %}" class="pf-manage-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;flex-shrink:0"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          {% trans "Manage subscription" %} →
+        </a>
+      {% else %}
+        <div class="pf-sub-badge free"><span class="pf-sub-dot"></span> FREE</div>
+        <div class="usage-bar-wrap">
+          <div class="usage-bar-hdr">
+            <span>{% trans "Repos" %}</span>
+            <span style="color:{% if repo_count >= free_limit %}var(--red){% else %}var(--text){% endif %}">{{ repo_count }} / {{ free_limit }}</span>
+          </div>
+          <div class="usage-bar-bg">
+            <div class="usage-bar-fill" style="width:{% widthratio repo_count free_limit 100 %}%;background:{% if repo_count >= free_limit %}var(--red){% elif repo_count >= 2 %}var(--amber){% else %}var(--accent){% endif %}"></div>
+          </div>
+        </div>
+        <a href="{% url 'billing' %}" class="btn-upgrade">{% trans "Upgrade to Pro" %} →</a>
+      {% endif %}
+    </div>
+
+    <!-- Connected accounts -->
+    <div class="pf-sec">
+      <div class="pf-acct-lbl">{% trans "connected accounts" %}</div>
+
+      {% if not github_profiles and not gitlab_profiles %}
+        <div class="pf-acct-empty">
+          {% trans "Nothing connected yet" %}<br>
+          <span style="color:var(--muted)">{% trans "Add GitHub or GitLab on the right to audit your private repositories." %}</span>
+        </div>
+      {% endif %}
+
+      {% for gh in github_profiles %}
+      <div class="pf-acct-item">
+        <div class="pf-acct-left">
+          <div class="pf-acct-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="width:13px;height:13px;color:var(--muted)"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          </div>
+          <div style="min-width:0">
+            <div class="pf-acct-name" title="{{ gh.github_login }}">{{ gh.github_login }}</div>
+            <div class="pf-acct-url">github.com</div>
+          </div>
+        </div>
+        <div class="pf-acct-btns">
+          <a href="{% url 'dashboard' %}" class="pf-acct-btn" title="{% trans 'Dashboard' %}">→</a>
+          <form method="POST" action="{% url 'disconnect_provider' 'github' gh.id %}" style="display:contents">
+            {% csrf_token %}<button type="submit" class="pf-acct-btn del" title="{% trans 'Disconnect' %}">✕</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+
+      {% for gp in gitlab_profiles %}
+      <div class="pf-acct-item">
+        <div class="pf-acct-left">
+          <div class="pf-acct-icon" style="color:#fc6d26">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="width:13px;height:13px"><path d="M22.65 14.39L12 22.13 1.35 14.39a.84.84 0 01-.3-.94l1.22-3.78 2.44-7.51A.42.42 0 014.82 2a.43.43 0 01.58 0 .42.42 0 01.11.18l2.44 7.49h8.1l2.44-7.51A.42.42 0 0118.6 2a.43.43 0 01.58 0 .42.42 0 01.11.18l2.44 7.51L23 13.45a.84.84 0 01-.35.94z"/></svg>
+          </div>
+          <div style="min-width:0">
+            <div class="pf-acct-name" title="{{ gp.gitlab_username }}">{{ gp.gitlab_username }}</div>
+            <div class="pf-acct-url" title="{{ gp.gitlab_url }}">{{ gp.gitlab_url|truncatechars:22 }}</div>
+          </div>
+        </div>
+        <div class="pf-acct-btns">
+          <a href="{% url 'gitlab_dashboard' %}" class="pf-acct-btn" title="{% trans 'Dashboard' %}">→</a>
+          <form method="POST" action="{% url 'disconnect_provider' 'gitlab' gp.id %}" style="display:contents">
+            {% csrf_token %}<button type="submit" class="pf-acct-btn del" title="{% trans 'Disconnect' %}">✕</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Bottom links -->
+    <div class="pf-bottom">
+      {% if not subscription.is_pro %}
+      <a href="{% url 'billing' %}" class="pf-bottom-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        {% trans "Manage subscription" %}
+      </a>
+      {% endif %}
+      {% comment %}
+        'account_logout' is allauth's own view: it answers a GET with an
+        unstyled confirmation page carrying allauth's menu, and leaves the
+        session signed in until that page is posted. Use the product's own
+        logout, the same one the nav uses.
+      {% endcomment %}
+      <a href="{% url 'logout' %}" class="pf-bottom-link danger">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        {% trans "Sign out" %}
+      </a>
+    </div>
+
+  </aside>
+
+  <!-- ── RIGHT COLUMN ───────────────────────────────────────────── -->
+  <div class="pf-right">
+
+    <!-- Tab navigation -->
+    <div class="tab-nav">
+      <button class="tab-btn" data-tab="connect" onclick="switchTab('connect')">{% trans "Connect" %}</button>
+      <button class="tab-btn" data-tab="ai" onclick="switchTab('ai')">{% trans "AI Settings" %}</button>
+      <button class="tab-btn" data-tab="notifications" onclick="switchTab('notifications')">{% trans "Notifications & API" %}</button>
+      <button class="tab-btn" data-tab="security" onclick="switchTab('security')">{% trans "Security" %}</button>
+    </div>
+
+    <!-- ── TAB: Connect ───────────────────────────────────────── -->
+    <div class="tab-panel" id="tab-connect">
+      <div class="connect-cards">
+
+        <!-- ── GitHub card ──────────────────────────────────────── -->
+        <div class="connect-card">
+          <div class="connect-card-hdr">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="width:15px;height:15px"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+            GitHub
+          </div>
+          <div class="connect-card-body">
+            {% if github_error %}<div class="inline-msg err">✗ {{ github_error }}</div>{% endif %}
+            {% if github_profiles %}
+              {% for gh in github_profiles %}
+              <div class="connect-status-ok {% if not gh.is_healthy %}needs-token{% endif %}" style="margin-bottom:8px;padding-right:8px">
+                <div class="connect-status-icon">
+                  {% if gh.is_healthy %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:11px;height:11px;color:var(--accent)"><polyline points="20 6 9 17 4 12"/></svg>{% else %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:11px;height:11px"><path d="M12 8v5"/><path d="M12 16h.01"/></svg>{% endif %}
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div class="connect-status-name">{{ gh.github_login }}</div>
+                  <div class="connect-status-url">github.com</div>
+                </div>
+                <form method="POST" action="{% url 'disconnect_provider' 'github' gh.id %}" style="display:contents">
+                  {% csrf_token %}<button type="submit" class="pf-acct-btn del" title="{% trans 'Disconnect' %}" style="flex-shrink:0">✕</button>
+                </form>
+              </div>
+              {% endfor %}
+              {% if github_needs_token %}
+              <div class="connect-hint">{% trans "Add a new token below to resume audits for this account." %}</div>
+              {% else %}
+              <a href="{% url 'dashboard' %}" class="btn btn-outline btn-sm" style="display:block;text-align:center;margin-bottom:14px">{% trans "Open Dashboard" %} →</a>
+              {% endif %}
+              <div style="border-top:1px solid var(--border);padding-top:12px">
+                <button type="button" class="adv-toggle" id="add-github-btn" onclick="toggleAddGithub()">
+                  <span class="adv-icon">▾</span> + {% trans "Add GitHub account" %}
+                </button>
+                <div id="add-github-body" class="adv-body">
+                  {% comment %}
+                    The trap this panel exists to defuse: github.com issues a
+                    token to whichever account the browser is signed in as. Open
+                    the token page while signed in as your main account and you
+                    get a token for your main account, however many other
+                    accounts you meant to add.
+                  {% endcomment %}
+                  <div class="connect-hint" style="margin:0 0 12px">
+                    {% trans "A token belongs to whichever GitHub account you are signed in as when you create it. To add a different account, open github.com in a private window and be signed in to GitHub as that account first." %}
+                  </div>
+                  {% if github_app_enabled %}
+                  <a href="{% url 'github_app_install' %}" class="btn-connect btn-connect-gh btn-app-install" style="margin-bottom:10px">
+                    {% trans "Install the GitHub App" %} →
+                  </a>
+                  <div class="install-note" style="margin-bottom:12px">
+                    {% trans "GitHub asks which account or organisation to install on, so this is the reliable way to add a second one." %}
+                  </div>
+                  <div class="or-divider"><span>{% trans "or connect with a token" %}</span></div>
+                  {% endif %}
+                  <div class="scopes-box" style="margin:0 0 12px">
+                    <div class="scopes-title">{% trans "Required scopes" %}</div>
+                    <div class="scope-item">repo — {% trans "read repositories" %}</div>
+                    <div class="scope-item">read:user — {% trans "username" %}</div>
+                  </div>
+                  <form method="POST" action="{% url 'connect_token' %}">
+                    {% csrf_token %}<input type="hidden" name="provider" value="github">
+                    <div class="form-group">
+                      <label class="form-label" for="gh-token">{% trans "Personal Access Token" %}</label>
+                      <input id="gh-token" class="form-input" type="password" name="token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" required autocomplete="off">
+                      <div class="form-hint"><a href="https://github.com/settings/tokens/new?scopes=repo,read:user" target="_blank" rel="noopener">github.com/settings/tokens</a></div>
+                    </div>
+                    <button type="submit" class="btn-connect btn-connect-gh">{% trans "Connect GitHub" %} →</button>
+                  </form>
+                </div>
+              </div>
+            {% else %}
+{% if github_app_enabled %}
+              <a href="{% url 'github_app_install' %}" class="btn-connect btn-connect-gh btn-app-install">
+                <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px">
+                  <path d="M12 .3a12 12 0 00-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 0-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2 0-.4-.5-1.6.2-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 016 0C17.3 4.6 18.3 5 18.3 5c.7 1.6.2 2.8.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0012 .3"/>
+                </svg>
+                {% trans "Install the GitHub App" %} →
+              </a>
+              <div class="install-note">
+                {% trans "One click, works across a whole organisation, and issues short-lived credentials instead of a long-lived token." %}
+              </div>
+              <div class="or-divider"><span>{% trans "or connect with a token" %}</span></div>
+              {% endif %}
+              <div class="scopes-box">
+                <div class="scopes-title">{% trans "Required scopes" %}</div>
+                <div class="scope-item">repo — {% trans "read repositories" %}</div>
+                <div class="scope-item">read:user — {% trans "username" %}</div>
+              </div>
+              <form method="POST" action="{% url 'connect_token' %}">
+                {% csrf_token %}<input type="hidden" name="provider" value="github">
+                <div class="form-group">
+                  <label class="form-label" for="gh-token-new">{% trans "Personal Access Token" %}</label>
+                  <input id="gh-token-new" class="form-input" type="password" name="token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" required autocomplete="off">
+                  <div class="form-hint"><a href="https://github.com/settings/tokens/new?scopes=repo,read:user" target="_blank" rel="noopener">github.com/settings/tokens</a></div>
+                </div>
+                <button type="submit" class="btn-connect btn-connect-gh">{% trans "Connect GitHub" %} →</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- ── GitLab card ──────────────────────────────────────── -->
+        <div class="connect-card">
+          <div class="connect-card-hdr">
+            <svg viewBox="0 0 24 24" fill="#fc6d26" style="width:15px;height:15px"><path d="M22.65 14.39L12 22.13 1.35 14.39a.84.84 0 01-.3-.94l1.22-3.78 2.44-7.51A.42.42 0 014.82 2a.43.43 0 01.58 0 .42.42 0 01.11.18l2.44 7.49h8.1l2.44-7.51A.42.42 0 0118.6 2a.43.43 0 01.58 0 .42.42 0 01.11.18l2.44 7.51L23 13.45a.84.84 0 01-.35.94z"/></svg>
+            GitLab
+          </div>
+          <div class="connect-card-body">
+            {% if gitlab_error %}<div class="inline-msg err">✗ {{ gitlab_error }}</div>{% endif %}
+            {% if not gitlab_profiles %}
+            {% if gitlab_enabled %}
+            <a href="/accounts/gitlab/login/?process=connect&amp;next=/profile/%23connect" class="btn-connect btn-connect-gl btn-app-install">
+              {% trans "Connect with GitLab" %} →
+            </a>
+            <div class="install-note">
+              {% trans "For gitlab.com. One click, read-only: enough to audit. When you first ask for a fix as a merge request, GitLab will ask you once to allow writing." %}
+            </div>
+            <div class="or-divider"><span>{% trans "or a token — for self-hosted GitLab" %}</span></div>
+            {% endif %}
+            <div class="scopes-box">
+              <div class="scopes-title">{% trans "Required scopes" %}</div>
+              <div class="scope-item">read_api — {% trans "read files via API" %}</div>
+              <div class="scope-item">read_user — {% trans "user profile" %}</div>
+              <div class="scope-item" style="color:var(--muted)">api — {% trans "optional: lets us open fixes as merge requests" %}</div>
+            </div>
+            {% endif %}
+            {% if gitlab_profiles %}
+              {% for gp in gitlab_profiles %}
+              <div class="connect-status-ok {% if not gp.is_healthy %}needs-token{% endif %}" style="margin-bottom:8px;padding-right:8px">
+                <div class="connect-status-icon">
+                  {% if gp.is_healthy %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:11px;height:11px;color:var(--accent)"><polyline points="20 6 9 17 4 12"/></svg>{% else %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:11px;height:11px"><path d="M12 8v5"/><path d="M12 16h.01"/></svg>{% endif %}
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div class="connect-status-name">{{ gp.gitlab_username }}</div>
+                  <div class="connect-status-url">{{ gp.gitlab_url|truncatechars:28 }}</div>
+                </div>
+                <form method="POST" action="{% url 'disconnect_provider' 'gitlab' gp.id %}" style="display:contents">
+                  {% csrf_token %}<button type="submit" class="pf-acct-btn del" title="{% trans 'Disconnect' %}" style="flex-shrink:0">✕</button>
+                </form>
+              </div>
+              {% endfor %}
+              {% if gitlab_needs_token %}
+              <div class="connect-hint">{% trans "Add a new token below to resume audits for this account." %}</div>
+              {% else %}
+              <a href="{% url 'gitlab_dashboard' %}" class="btn btn-outline btn-sm" style="display:block;text-align:center;margin-bottom:14px">{% trans "Open Dashboard" %} →</a>
+              {% endif %}
+              <div style="border-top:1px solid var(--border);padding-top:12px">
+                <button type="button" class="adv-toggle" id="add-gitlab-btn" onclick="toggleAddGitlab()">
+                  <span class="adv-icon">▾</span> + {% trans "Add GitLab account" %}
+                </button>
+                <div id="add-gitlab-body" class="adv-body">
+                  <form method="POST" action="{% url 'connect_token' %}" id="gitlab-pat-form">
+                    {% csrf_token %}<input type="hidden" name="provider" value="gitlab">
+                    <div class="form-group">
+                      <label class="form-label" for="gl-token">{% trans "Personal Access Token" %}</label>
+                      <input id="gl-token" class="form-input" type="password" name="token" placeholder="glpat-xxxxxxxxxxxxxxxxxxxx" required autocomplete="off" style="font-family:var(--mono)">
+                    </div>
+                    <button type="button" class="adv-toggle" id="adv-gitlab-btn" onclick="toggleAdv()">
+                      <span id="adv-gitlab-icon" class="adv-icon">▾</span> {% trans "Advanced" %}
+                    </button>
+                    <div id="adv-gitlab-body" class="adv-body">
+                      <div class="form-group">
+                        <label class="form-label" for="gitlab-url-input">{% trans "GitLab URL" %}</label>
+                        <input class="form-input" type="url" name="gitlab_url" id="gitlab-url-input" value="{{ gitlab_profiles.0.gitlab_url|default:'https://gitlab.com' }}" oninput="onGitlabUrlChange(this.value, this)" style="font-family:var(--mono);font-size:12px">
+                        <div class="form-hint">{% trans "For self-hosted: https://gitlab.example.com" %}</div>
+                      </div>
+                      <div id="selfhosted-options" style="display:none">
+                        <div class="form-group">
+                          <label class="form-label" for="custom-dns-input">{% trans "Internal DNS" %} <span style="font-size: 11.5px;color:var(--dim)">({% trans "optional" %})</span></label>
+                          <input class="form-input" type="text" name="custom_dns" id="custom-dns-input" placeholder="192.168.1.1" style="font-family:var(--mono)">
+                        </div>
+                        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:12px;color:var(--text);margin-bottom:14px">
+                          <input type="checkbox" name="verify_ssl" value="off" id="ssl-checkbox" style="margin-top:2px;flex-shrink:0;accent-color:var(--amber)">
+                          <span><strong style="color:var(--amber)">{% trans "Disable SSL verification" %}</strong><br><span style="color:var(--muted);font-size:11px">{% trans "Only for self-signed certificates." %}</span></span>
+                        </label>
+                      </div>
+                      <div class="form-hint" style="margin-bottom:10px">
+                        {% trans "Create token:" %} <a href="{{ gitlab_profiles.0.token_page_url|default:'https://gitlab.com/-/user_settings/personal_access_tokens' }}" target="_blank" rel="noopener" id="gitlab-token-link">{{ gitlab_profiles.0.host|default:'gitlab.com' }}/-/user_settings/personal_access_tokens</a>
+                      </div>
+                      <div class="scopes-box">
+                        <div class="scopes-title">{% trans "Required scopes" %}</div>
+                        <div class="scope-item">read_user — {% trans "user profile" %}</div>
+                        <div class="scope-item">read_api — {% trans "read files via API" %}</div>
+                      </div>
+                    </div>
+                    <button type="submit" class="btn-connect btn-connect-gl" style="margin-top:4px">{% trans "Connect GitLab" %} →</button>
+                  </form>
+                </div>
+              </div>
+            {% else %}
+              <form method="POST" action="{% url 'connect_token' %}" id="gitlab-pat-form">
+                {% csrf_token %}<input type="hidden" name="provider" value="gitlab">
+                <div class="form-group">
+                  <label class="form-label" for="gl-token-new">{% trans "Personal Access Token" %}</label>
+                  <input id="gl-token-new" class="form-input" type="password" name="token" placeholder="glpat-xxxxxxxxxxxxxxxxxxxx" required autocomplete="off" style="font-family:var(--mono)">
+                </div>
+                <button type="button" class="adv-toggle" id="adv-gitlab-btn" onclick="toggleAdv()">
+                  <span id="adv-gitlab-icon" class="adv-icon">▾</span> {% trans "Advanced" %}
+                </button>
+                <div id="adv-gitlab-body" class="adv-body">
+                  <div class="form-group">
+                    <label class="form-label" for="gitlab-url-input-new">{% trans "GitLab URL" %}</label>
+                    <input class="form-input" type="url" name="gitlab_url" id="gitlab-url-input-new" value="https://gitlab.com" oninput="onGitlabUrlChange(this.value, this)" style="font-family:var(--mono);font-size:12px">
+                    <div class="form-hint">{% trans "For self-hosted: https://gitlab.example.com" %}</div>
+                  </div>
+                  <div id="selfhosted-options-new" style="display:none">
+                    <div class="form-group">
+                      <label class="form-label" for="custom-dns-input-new">{% trans "Internal DNS" %} <span style="font-size: 11.5px;color:var(--dim)">({% trans "optional" %})</span></label>
+                      <input class="form-input" type="text" name="custom_dns" id="custom-dns-input-new" placeholder="192.168.1.1" style="font-family:var(--mono)">
+                    </div>
+                    <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:12px;color:var(--text);margin-bottom:14px">
+                      <input type="checkbox" name="verify_ssl" value="off" id="ssl-checkbox-new" style="margin-top:2px;flex-shrink:0;accent-color:var(--amber)">
+                      <span><strong style="color:var(--amber)">{% trans "Disable SSL verification" %}</strong><br><span style="color:var(--muted);font-size:11px">{% trans "Only for self-signed certificates." %}</span></span>
+                    </label>
+                  </div>
+                  <div class="form-hint" style="margin-bottom:10px">
+                    {% trans "Create token:" %} <a href="https://gitlab.com/-/user_settings/personal_access_tokens" target="_blank" rel="noopener" id="gitlab-token-link-new">gitlab.com/-/user_settings/personal_access_tokens</a>
+                  </div>
+                  <div class="scopes-box">
+                    <div class="scopes-title">{% trans "Required scopes" %}</div>
+                    <div class="scope-item">read_user — {% trans "user profile" %}</div>
+                    <div class="scope-item">read_api — {% trans "read files via API" %}</div>
+                  </div>
+                </div>
+                <button type="submit" class="btn-connect btn-connect-gl">{% trans "Connect GitLab" %} →</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>{# /connect-cards #}
+    </div>{# /tab-connect #}
+
+    <!-- ── TAB: AI Settings ───────────────────────────────────── -->
+    <div class="tab-panel" id="tab-ai">
+      {% comment %}
+        What leaves the customer's boundary, in plain words, next to the switch
+        that stops it. This card is not gated on a plan: whether repository
+        content is sent to a third party is not a paid feature, it is a decision
+        the account owner is entitled to make.
+      {% endcomment %}
+      <div class="pf-card" id="ai-privacy">
+        <div class="pf-card-hdr">{% trans "what leaves your repository" %}</div>
+        <div class="pf-card-body">
+
+          <p class="privacy-lede">
+            {% trans "An audit reads your repository on our server. Only the AI step sends anything to a third party, and only these:" %}
+          </p>
+
+          <ul class="privacy-list">
+            <li class="yes">{% trans "The failed check's name and our recommendation for it." %}</li>
+            <li class="yes">{% trans "Facts read from the repository: languages, frameworks, Docker base images and ports, CI workflow names, Terraform providers, the top-level file list, the first lines of the README." %}</li>
+            <li class="yes">{% trans "For some checks, the one configuration file the check is about — a Dockerfile, a CI workflow, a .gitignore — truncated to 4000 characters." %}</li>
+          </ul>
+
+          <p class="privacy-lede" style="margin-top:16px">{% trans "Never sent:" %}</p>
+          <ul class="privacy-list">
+            <li class="no">{% trans "Your source code. No check reads application code, and none is forwarded." %}</li>
+            <li class="no">{% trans "Anything the secret scanner recognises. Every credential pattern it reports on is masked before sending — including in files it is not scanning. The secrets check itself sends no file at all." %}</li>
+            <li class="no">{% trans "Your access tokens, which are encrypted at rest and never appear in a prompt." %}</li>
+          </ul>
+
+          <div class="privacy-switch">
+            <form method="POST" action="{% url 'update_ai_consent' %}">
+              {% csrf_token %}
+              <input type="hidden" name="ai_analysis_enabled"
+                     value="{% if user_profile.ai_analysis_enabled %}0{% else %}1{% endif %}">
+              <div class="privacy-switch-row">
+                <div>
+                  <div class="privacy-switch-title">
+                    {% if user_profile.ai_analysis_enabled %}{% trans "AI analysis is on" %}{% else %}{% trans "AI analysis is off" %}{% endif %}
+                  </div>
+                  <div class="privacy-switch-sub">
+                    {% if user_profile.ai_analysis_enabled %}
+                      {% trans "Turning it off stops anything leaving. Reports keep their summary and per-issue advice — written by our own rules instead of a model." %}
+                    {% else %}
+                      {% trans "Nothing is being sent anywhere. Summaries and advice come from our own rules." %}
+                    {% endif %}
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-sm {% if user_profile.ai_analysis_enabled %}btn-outline{% else %}btn-primary{% endif %}">
+                  {% if user_profile.ai_analysis_enabled %}{% trans "Turn off" %}{% else %}{% trans "Turn on" %}{% endif %}
+                </button>
+              </div>
+            </form>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-card-hdr">{% trans "ai provider" %} <span style="font-size: 11px;color:var(--accent);font-weight:700;letter-spacing:.08em">PRO</span></div>
+        <div class="pf-card-body">
+
+          {% if not subscription.is_pro %}
+          <div class="inline-msg" style="background:rgba(0,255,136,.04);border-color:rgba(0,255,136,.12);color:var(--muted)">
+            🔒 {% trans "AI settings are available on the Pro plan." %}
+            <a href="{% url 'billing' %}" style="color:var(--accent);margin-left:4px">{% trans "Get Pro →" %}</a>
+          </div>
+          {% endif %}
+
+          <form method="POST" action="{% url 'save_ai_settings' %}" {% if not subscription.is_pro %}style="pointer-events:none;opacity:.45"{% endif %}>
+            {% csrf_token %}
+
+            <div style="font-family:var(--mono);font-size: 11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:12px">{% trans "select provider" %}</div>
+            <div class="ai-provider-grid">
+
+              <label class="ai-radio-label {% if not ai_cfg or not ai_cfg.provider or ai_cfg.provider == 'gemini' %}selected{% endif %}" id="ai-card-gemini">
+                <input type="radio" name="provider" value="gemini" class="ai-radio-input"
+                  {% if not ai_cfg or not ai_cfg.provider or ai_cfg.provider == 'gemini' %}checked{% endif %}
+                  onchange="onAiCard('gemini')">
+                <div class="ai-selected-check">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" style="width:8px;height:8px"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div class="ai-provider-logo ai-logo-gemini">G</div>
+                <div class="ai-provider-name">Gemini</div>
+                <div class="ai-provider-desc">{% trans "Free tier" %}</div>
+              </label>
+
+              <label class="ai-radio-label {% if ai_cfg and ai_cfg.provider == 'anthropic' %}selected{% endif %}" id="ai-card-anthropic">
+                <input type="radio" name="provider" value="anthropic" class="ai-radio-input"
+                  {% if ai_cfg and ai_cfg.provider == 'anthropic' %}checked{% endif %}
+                  onchange="onAiCard('anthropic')">
+                <div class="ai-selected-check">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" style="width:8px;height:8px"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div class="ai-provider-logo ai-logo-claude">A</div>
+                <div class="ai-provider-name">Claude</div>
+                <div class="ai-provider-desc">{% trans "Recommended" %}</div>
+              </label>
+
+              <label class="ai-radio-label {% if ai_cfg and ai_cfg.provider == 'openai' %}selected{% endif %}" id="ai-card-openai">
+                <input type="radio" name="provider" value="openai" class="ai-radio-input"
+                  {% if ai_cfg and ai_cfg.provider == 'openai' %}checked{% endif %}
+                  onchange="onAiCard('openai')">
+                <div class="ai-selected-check">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" style="width:8px;height:8px"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div class="ai-provider-logo ai-logo-openai">⬡</div>
+                <div class="ai-provider-name">GPT</div>
+                <div class="ai-provider-desc">GPT-4o</div>
+              </label>
+
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="ai-api-key">{% trans "API Key" %}</label>
+              <div class="key-input-row">
+                <input class="form-input" type="password" name="api_key" id="ai-api-key"
+                  value="{{ ai_cfg.api_key|default:'' }}"
+                  placeholder="{% if ai_cfg and ai_cfg.provider == 'anthropic' %}sk-ant-...{% elif ai_cfg and ai_cfg.provider == 'openai' %}sk-...{% else %}AIza...{% endif %}"
+                  autocomplete="off">
+                <button type="button" class="key-eye-btn" onclick="toggleAiKey()">👁</button>
+              </div>
+              <div class="form-hint" id="ai-key-hint">
+                {% trans "Get for free:" %}
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" id="ai-key-link" style="color:var(--accent)">Google AI Studio</a>
+              </div>
+            </div>
+
+            {% if ai_cfg and ai_cfg.api_key %}
+            <div style="font-size:11px;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:5px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:11px;height:11px"><polyline points="20 6 9 17 4 12"/></svg>
+              {% trans "Key saved" %} · {{ ai_cfg.get_provider_display }}
+            </div>
+            {% endif %}
+
+            <button type="submit" class="btn btn-primary btn-sm" {% if not subscription.is_pro %}disabled{% endif %}>{% trans "Save" %}</button>
+          </form>
+        </div>
+      </div>
+    </div>{# /tab-ai #}
+
+    <!-- ── TAB: Notifications & API ──────────────────────────── -->
+    <div class="tab-panel" id="tab-notifications">
+
+      <!-- Email notifications -->
+      <div class="pf-card">
+        <div class="pf-card-hdr">{% trans "email notifications" %}</div>
+        <div class="pf-card-body">
+          <div id="notif-inline-msg" style="display:none;margin-bottom:12px"></div>
+          <form id="notif-form" method="POST" action="{% url 'update_notifications' %}">
+            {% csrf_token %}
+            <input type="hidden" name="email_notifications" id="notif-hidden" value="{% if user_profile.email_notifications %}1{% endif %}">
+            <div class="notif-row">
+              <div class="notif-row-text">
+                <div class="notif-row-title">{% trans "Send audit notifications" %}</div>
+                <div class="notif-row-hint">
+                  {% trans "Receive an email when each audit completes." %}
+                  {% if not user.email %}<span style="color:var(--amber)"> {% trans "Add an email in Security settings first." %}</span>{% endif %}
+                </div>
+              </div>
+              <button type="button" class="ts-btn {% if user_profile.email_notifications %}on{% endif %}" id="ts-notif"
+                onclick="toggleNotif()" aria-pressed="{{ user_profile.email_notifications|yesno:'true,false' }}">
+                <div class="ts-track"><div class="ts-thumb"></div></div>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Webhook -->
+      <div class="pf-card">
+        <div class="pf-card-hdr">{% trans "webhook url" %}</div>
+        <div class="pf-card-body">
+          {% if subscription.is_pro %}
+          <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">{% trans "Automatically trigger an audit on every push to your repository." %}</p>
+          <div class="form-group">
+            <label class="form-label" for="webhook-url-input">{% trans "Webhook URL" %}</label>
+            <div class="code-input-row">
+              <input class="code-input" type="text" id="webhook-url-input" value="{{ webhook_url }}" readonly onclick="this.select()">
+              <button class="copy-btn" id="btn-copy-webhook" onclick="copyField('webhook-url-input', 'btn-copy-webhook')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                <span id="lbl-copy-webhook">{% trans "Copy" %}</span>
+              </button>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label class="form-label" for="webhook-secret-input">{% trans "Webhook Secret" %}</label>
+            <div class="code-input-row">
+              <input class="code-input" type="password" id="webhook-secret-input" value="{{ user_profile.webhook_secret }}" readonly onclick="this.select()">
+              <button class="eye-btn" onclick="toggleWebhookSecret()" title="{% trans 'Show/hide' %}">👁</button>
+              <button class="copy-btn" id="btn-copy-webhook-secret" onclick="copyField('webhook-secret-input', 'btn-copy-webhook-secret')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                <span id="lbl-copy-webhook-secret">{% trans "Copy" %}</span>
+              </button>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.7">
+            GitHub: Settings → Webhooks → Add webhook.<br>
+            Payload URL: <em>{% trans "the URL above" %}</em> ·
+            Content type: <code style="font-family:var(--mono);color:var(--text)">application/json</code><br>
+            Secret: <em>{% trans "the secret above (required — requests without it are rejected)" %}</em> ·
+            Events: <code style="font-family:var(--mono);color:var(--text)">push</code>
+          </div>
+          {% else %}
+          <div style="padding:20px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.12);border-radius:6px;text-align:center">
+            <div style="font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:8px">
+              🔒 {% trans "Webhook auto-audit is a Pro feature" %}
+            </div>
+            <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px">
+              {% trans "Upgrade to Pro to automatically trigger an audit on every push to your repository." %}
+            </p>
+            <a href="{% url 'billing' %}" style="display:inline-block;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#000;background:var(--accent);padding:7px 18px;border-radius:4px;transition:background .15s">
+              {% trans "Upgrade to Pro" %} →
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- REST API token -->
+      <div class="pf-card">
+        <div class="pf-card-hdr">{% trans "rest api token" %}</div>
+        <div class="pf-card-body">
+          <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">{% trans "Use a Bearer token to trigger audits programmatically." %}</p>
+          <div class="form-group">
+            <label class="form-label" for="api-token-input">{% trans "API Token" %}</label>
+            <div class="code-input-row">
+              <input class="code-input" type="password" id="api-token-input" value="{{ api_token }}" readonly onclick="this.select()">
+              <button class="eye-btn" onclick="toggleApiToken()" title="{% trans 'Show/hide' %}">👁</button>
+              <button class="copy-btn" id="btn-copy-api" onclick="copyField('api-token-input', 'btn-copy-api')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                <span id="lbl-copy-api">{% trans "Copy" %}</span>
+              </button>
+            </div>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" onclick="openRegenModal()">{% trans "Regenerate" %}</button>
+          <div id="regen-inline-msg" style="display:none;margin-top:10px"></div>
+
+          <button type="button" class="api-docs-toggle" onclick="toggleApiDocs()" id="api-docs-btn">
+            <span id="api-docs-arrow" style="font-size: 11px">▾</span>
+            {% trans "API reference" %}
+          </button>
+          <div id="api-docs-body" class="api-docs-body">
+            <div class="api-line"><span class="api-method get">GET</span> /api/v1/audits/</div>
+            <div class="api-line"><span class="api-method post">POST</span> /api/v1/audit/start/</div>
+            <div class="api-line"><span class="api-method get">GET</span> /api/v1/audit/&lt;id&gt;/</div>
+            <div class="api-line" style="margin-top:8px;color:var(--dim)">Authorization: Bearer &lt;token&gt;</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- The Action is what most people want the token for. Putting it next to
+           the token means nobody has to know it exists first. -->
+      <div class="pf-card">
+        <div class="pf-card-hdr">{% trans "block a merge on the score" %}</div>
+        <div class="pf-card-body">
+          <p class="ci-lede">{% trans "Run the audit on the commit under test and fail the build when the score drops below your threshold. Paste the token above into a repository secret and add four lines to a workflow." %}</p>
+          <pre class="ci-snippet"><code>- uses: devops-audit/action@v1
+  with:
+    token: ${% templatetag openvariable %} secrets.DEVOPS_AUDIT_TOKEN {% templatetag closevariable %}</code></pre>
+          <p class="ci-note">{% trans "The threshold lives in .devopsaudit.yml next to your code, so changing it is a pull request rather than a workflow edit. Make the job a required status check and the score stops being advice." %}</p>
+        </div>
+      </div>
+
+
+    </div>{# /tab-notifications #}
+
+    <!-- ── TAB: Security ─────────────────────────────────────── -->
+    <div class="tab-panel" id="tab-security">
+
+      {% if settings_success %}<div class="inline-msg ok">✓ {% trans "Settings saved" %}</div>
+      {% elif settings_error == 'username_taken' %}<div class="inline-msg err">✗ {% trans "Username already taken" %}</div>
+      {% elif settings_error == 'username_short' %}<div class="inline-msg err">✗ {% trans "Username must be at least 3 characters" %}</div>
+      {% elif settings_error == 'username_invalid' %}<div class="inline-msg err">✗ {% trans "Username: only letters, digits, _ and -" %}</div>
+      {% elif settings_error == 'email_taken' %}<div class="inline-msg err">✗ {% trans "This email is already registered." %}</div>
+      {% elif settings_error == 'delete_mismatch' %}<div class="inline-msg err">✗ {% trans "Username does not match" %}</div>
+      {% endif %}
+
+      {% if pwd_success %}<div class="inline-msg ok">✓ {% trans "Password changed" %}</div>
+      {% elif pwd_error == 'wrong' %}<div class="inline-msg err">✗ {% trans "Wrong current password" %}</div>
+      {% elif pwd_error == 'short' %}<div class="inline-msg err">✗ {% trans "Password must be at least 6 characters" %}</div>
+      {% elif pwd_error == 'mismatch' %}<div class="inline-msg err">✗ {% trans "Passwords do not match" %}</div>
+      {% endif %}
+
+      <!-- Account info -->
+      <div class="pf-card">
+        <div class="pf-card-hdr">{% trans "account" %}</div>
+        <div class="pf-card-body">
+          <form method="POST" action="{% url 'update_profile' %}">
+            {% csrf_token %}
+            <div class="form-group">
+              <label class="form-label" for="account-username">{% trans "Username" %}</label>
+              <input class="form-input" type="text" id="account-username" name="username" value="{{ user.username }}" autocomplete="username">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="account-email">{% trans "Email" %} <span style="font-size: 11.5px;color:var(--dim)">({% trans "optional" %})</span></label>
+              <input id="account-email" class="form-input" type="email" name="email" value="{{ user.email }}" placeholder="you@example.com" autocomplete="email">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">{% trans "Save" %}</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Change password -->
+      <div class="pf-card">
+        <div class="pf-card-hdr">{% trans "change password" %}</div>
+        <div class="pf-card-body">
+          <form method="POST" action="{% url 'change_password' %}">
+            {% csrf_token %}
+            <div class="form-group">
+              <label class="form-label" for="pw-current">{% trans "Current password" %}</label>
+              <input class="form-input" type="password" id="pw-current" name="current_password" required autocomplete="current-password">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pw-new">{% trans "New password" %}</label>
+              <input class="form-input" type="password" id="pw-new" name="new_password" required autocomplete="new-password">
+              <div class="form-hint">{% trans "Minimum 6 characters" %}</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pw-confirm">{% trans "Confirm password" %}</label>
+              <input class="form-input" type="password" id="pw-confirm" name="confirm_password" required autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">{% trans "Change password" %}</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="pf-card danger-card">
+        <div class="pf-card-hdr">{% trans "danger zone" %}</div>
+        <div class="pf-card-body">
+          <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.65">{% trans "Account deletion is irreversible. All data will be permanently deleted." %}</p>
+          <button class="btn btn-danger btn-sm" onclick="openDelModal()">{% trans "Delete account" %}</button>
+        </div>
+      </div>
+
+    </div>{# /tab-security #}
+
+  </div>{# /pf-right #}
+</div>{# /profile-layout #}
+</div>{# /container #}
+
+<!-- ── Delete account modal ──────────────────────────────────── -->
+<div id="del-modal-overlay" class="del-modal-overlay" onclick="if(event.target===this)closeDelModal()">
+  <div class="del-modal">
+    <button class="del-modal-close" onclick="closeDelModal()">✕</button>
+    <div class="del-modal-title">⚠ {% trans "Delete account" %}</div>
+    <div class="del-modal-desc">{% trans "This is irreversible. All audits, settings and subscriptions will be permanently deleted." %}</div>
+    <form method="POST" action="{% url 'delete_account' %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label" style="color:var(--red)" for="delete-confirm">{% trans "Enter your username to confirm:" %} <strong style="color:var(--text)">{{ user.username }}</strong></label>
+        <input id="delete-confirm" class="form-input" type="text" name="confirm_delete" placeholder="{{ user.username }}" autocomplete="off" style="border-color:rgba(255,68,102,.3)">
+      </div>
+      <button type="submit" class="btn btn-danger" style="width:100%">{% trans "Permanently delete" %}</button>
+    </form>
+  </div>
+</div>
+<!-- ── Regenerate API token modal ─────────────────────────── -->
+<div id="regen-modal-overlay" class="del-modal-overlay" onclick="if(event.target===this)closeRegenModal()">
+  <div class="del-modal regen-modal">
+    <button class="del-modal-close" onclick="closeRegenModal()">✕</button>
+    <div class="regen-modal-title">{% trans "Regenerate API token?" %}</div>
+    <div class="del-modal-desc">{% trans "The old token will stop working immediately." %}</div>
+    <div class="regen-modal-actions">
+      <button type="button" class="btn-regen-cancel" onclick="closeRegenModal()">{% trans "Cancel" %}</button>
+      <button type="button" class="btn-regen-confirm" id="regen-confirm-btn" onclick="doRegenToken()">{% trans "Regenerate" %}</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// A keyboard user cannot click the backdrop, so Escape closes dialogs too.
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  document.querySelectorAll('.modal-overlay.open, .modal.open').forEach(function (m) {
+    m.classList.remove('open');
+  });
+});
+</script>
+<script>
+/* The path is the same on gitlab.com and on a self-hosted instance; only the
+   host differs. Sending a self-hosted customer to gitlab.com is the kind of
+   small wrongness that makes a product feel built for somebody else. */
+const GITLAB_TOKEN_PATH = '/-/user_settings/personal_access_tokens';
+
+/* ── Tab switching ──────────────────────────────────────── */
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+  history.replaceState(null, '', '#' + name);
+}
+
+(function() {
+  const hash = window.location.hash.slice(1);
+  const valid = ['connect', 'ai', 'notifications', 'security'];
+  {% if github_error or gitlab_error %}
+    switchTab('connect');
+  {% elif settings_success or settings_error or pwd_success or pwd_error %}
+    switchTab('security');
+  {% else %}
+    switchTab(valid.includes(hash) ? hash : 'connect');
+  {% endif %}
+})();
+
+(function() {
+  document.querySelectorAll('[id^="gitlab-url-input"]').forEach(
+    input => onGitlabUrlChange(input.value || '', input));
+})();
+
+/* Take the reader to the field they have to fill, not to an anchor. The tab
+   panels are switched in JavaScript, so a plain #connect link lands on
+   whichever tab happened to be open. */
+function goReconnect() {
+  switchTab('connect');
+  // name="token" exactly: a suffix match also catches csrfmiddlewaretoken,
+  // which is hidden, so focus() would quietly do nothing.
+  const card = document.querySelector('.connect-status-ok.needs-token')?.closest('.connect-card');
+  const field = card && [...card.querySelectorAll('input[name="token"]')]
+    .find(el => el.offsetParent !== null);
+  const target = field || card || document.querySelector('.connect-card');
+  target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (field) setTimeout(() => field.focus(), 350);
+}
+
+/* ── GitHub Add Account toggle ──────────────────────────── */
+function toggleAddGithub() {
+  const btn  = document.getElementById('add-github-btn');
+  const body = document.getElementById('add-github-body');
+  if (!btn || !body) return;
+  const open = body.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+
+/* ── GitLab Add Account toggle ──────────────────────────── */
+function toggleAddGitlab() {
+  const btn  = document.getElementById('add-gitlab-btn');
+  const body = document.getElementById('add-gitlab-body');
+  if (!btn || !body) return;
+  const open = body.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+
+/* ── GitLab Advanced toggle ─────────────────────────────── */
+function toggleAdv() {
+  const btn  = document.getElementById('adv-gitlab-btn');
+  const body = document.getElementById('adv-gitlab-body');
+  if (!btn || !body) return;
+  const open = body.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+
+function onGitlabUrlChange(val, el) {
+  // Scope everything to the form the input lives in — there are two of them.
+  const form = el ? el.closest('form') : document;
+  const isSelfHosted = val && !val.match(/^https?:\/\/(www\.)?gitlab\.com\/?$/i);
+
+  const opts = form.querySelector('[id^="selfhosted-options"]');
+  if (opts) opts.style.display = isSelfHosted ? 'block' : 'none';
+
+  const link = form.querySelector('[id^="gitlab-token-link"]');
+  if (!link) return;
+  let host = 'gitlab.com';
+  let origin = 'https://gitlab.com';
+  if (isSelfHosted && val) {
+    try {
+      const parsed = new URL(val);
+      host = parsed.host;
+      origin = parsed.origin;
+    } catch (e) { /* half-typed URL; keep the default until it parses */ }
+  }
+  link.href = origin + GITLAB_TOKEN_PATH;
+  link.textContent = host + GITLAB_TOKEN_PATH;
+}
+{% if github_error or github_needs_token %}
+(function() {
+  // A hint that points at a collapsed form is not a fix. When the connection
+  // needs a token, the field to paste it into is already open.
+  const btn  = document.getElementById('add-github-btn');
+  const body = document.getElementById('add-github-body');
+  if (btn && body) { btn.classList.add('open'); body.classList.add('open'); }
+})();
+{% endif %}
+{% if gitlab_error or gitlab_needs_token %}
+(function() {
+  // Open outer "Add GitLab account" wrapper (if user already has accounts)
+  const addBtn  = document.getElementById('add-gitlab-btn');
+  const addBody = document.getElementById('add-gitlab-body');
+  if (addBtn && addBody) { addBtn.classList.add('open'); addBody.classList.add('open'); }
+  // Open inner Advanced section
+  const adv  = document.getElementById('adv-gitlab-btn');
+  const body = document.getElementById('adv-gitlab-body');
+  if (adv && body) { adv.classList.add('open'); body.classList.add('open'); }
+  document.querySelectorAll('[id^="gitlab-url-input"]').forEach(
+    input => onGitlabUrlChange(input.value || '', input));
+})();
+{% endif %}
+
+/* ── AI provider cards ──────────────────────────────────── */
+function onAiCard(val) {
+  document.querySelectorAll('.ai-radio-label').forEach(l => l.classList.remove('selected'));
+  document.getElementById('ai-card-' + val)?.classList.add('selected');
+  const inp  = document.getElementById('ai-api-key');
+  const link = document.getElementById('ai-key-link');
+  const hint = document.getElementById('ai-key-hint');
+  if (!inp) return;
+  if (val === 'anthropic') {
+    inp.placeholder = 'sk-ant-...';
+    if (link) { link.href = 'https://console.anthropic.com/keys'; link.textContent = 'console.anthropic.com'; }
+    if (hint) hint.firstChild.textContent = '{% trans "Get key:" %} ';
+  } else if (val === 'openai') {
+    inp.placeholder = 'sk-...';
+    if (link) { link.href = 'https://platform.openai.com/api-keys'; link.textContent = 'platform.openai.com'; }
+    if (hint) hint.firstChild.textContent = '{% trans "Get key:" %} ';
+  } else {
+    inp.placeholder = 'AIza...';
+    if (link) { link.href = 'https://aistudio.google.com/app/apikey'; link.textContent = 'Google AI Studio'; }
+    if (hint) hint.firstChild.textContent = '{% trans "Get for free:" %} ';
+  }
+}
+(function() {
+  const checked = document.querySelector('.ai-radio-input:checked');
+  if (checked) onAiCard(checked.value);
+})();
+
+function toggleAiKey() {
+  const inp = document.getElementById('ai-api-key');
+  if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+/* ── CSRF cookie helper ─────────────────────────────────── */
+function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+
+/* ── Toast helper ───────────────────────────────────────── */
+function showToast(message, type) {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.textContent = (type === 'success' ? '✓ ' : '✗ ') + message;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+/* ── Notifications toggle ───────────────────────────────── */
+function toggleNotif() {
+  const btn = document.getElementById('ts-notif');
+  if (!btn) return;
+  const isOn = btn.classList.toggle('on');
+  btn.setAttribute('aria-pressed', String(isOn));
+
+  const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+               || getCookie('csrftoken');
+  const formData = new FormData();
+  formData.append('email_notifications', isOn ? '1' : '0');
+  formData.append('csrfmiddlewaretoken', csrf);
+
+  fetch('{% url "update_notifications" %}', {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    body: formData,
+  })
+  .then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .then(data => {
+    if (data.ok) {
+      showToast('{% trans "Settings saved" %}', 'success');
+    } else {
+      throw new Error('server error');
+    }
+  })
+  .catch(err => {
+    btn.classList.toggle('on');
+    btn.setAttribute('aria-pressed', String(!isOn));
+    showToast('{% trans "Error saving settings" %}', 'error');
+    console.error('toggleNotif:', err);
+  });
+}
+
+/* ── Regen API token modal ──────────────────────────────── */
+function openRegenModal()  { document.getElementById('regen-modal-overlay').classList.add('open'); }
+function closeRegenModal() { document.getElementById('regen-modal-overlay').classList.remove('open'); }
+function doRegenToken() {
+  const confirmBtn = document.getElementById('regen-confirm-btn');
+  if (confirmBtn) confirmBtn.disabled = true;
+  fetch('{% url "regenerate_api_token" %}', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+  }).then(r => r.json()).then(data => {
+    closeRegenModal();
+    if (confirmBtn) confirmBtn.disabled = false;
+    const inp = document.getElementById('api-token-input');
+    if (inp) inp.value = data.token;
+    const msg = document.getElementById('regen-inline-msg');
+    if (!msg) return;
+    msg.className = 'inline-msg ok';
+    msg.textContent = '✓ {% trans "Token updated" %}';
+    msg.style.display = 'block';
+    setTimeout(() => { msg.style.display = 'none'; }, 3000);
+  }).catch(() => {
+    closeRegenModal();
+    if (confirmBtn) confirmBtn.disabled = false;
+  });
+}
+
+/* ── Copy field helper ──────────────────────────────────── */
+function copyField(inputId, btnId) {
+  const inp = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
+  if (!inp) return;
+  const val = inp.value;
+  copyText(val).then((ok) => {
+    if (!btn) return;
+    if (ok) btn.classList.add('copied');
+    const lbl = btn.querySelector('span');
+    const orig = lbl?.textContent;
+    // A token the reader believes they copied and did not is worse than an
+    // explicit "do it yourself".
+    if (lbl) lbl.textContent = ok ? '✓ {% trans "Copied" %}' : '{% trans "Press Ctrl+C" %}';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      if (lbl) lbl.textContent = orig;
+    }, 2000);
+  });
+}
+
+function toggleApiToken() {
+  const inp = document.getElementById('api-token-input');
+  if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function toggleWebhookSecret() {
+  const inp = document.getElementById('webhook-secret-input');
+  if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+/* ── API docs toggle ────────────────────────────────────── */
+function toggleApiDocs() {
+  const body  = document.getElementById('api-docs-body');
+  const arrow = document.getElementById('api-docs-arrow');
+  if (!body) return;
+  const open = body.classList.toggle('open');
+  if (arrow) arrow.textContent = open ? '▴' : '▾';
+}
+
+/* ── Delete modal ───────────────────────────────────────── */
+function openDelModal()  { document.getElementById('del-modal-overlay').classList.add('open'); }
+function closeDelModal() { document.getElementById('del-modal-overlay').classList.remove('open'); }
+</script>
+{% endblock %}

@@ -1,0 +1,301 @@
+{% extends "app/base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Overview" %} — DevOpsCheck{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+
+{% block extra_style %}
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .org-wrap { padding: 24px 16px 60px; }
+  .org-head { flex-direction: column; align-items: stretch; gap: 14px; }
+  .org-controls form { width: 100%; flex-direction: column; }
+  .org-select { width: 100%; min-height: 44px; }
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+  .spark { height: 64px; }
+}
+@media (max-width: 420px) {
+  .kpis { grid-template-columns: 1fr; }
+}
+
+.org-wrap { max-width: 1180px; margin: 0 auto; padding: 32px 24px 72px; }
+.org-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
+.org-title { font-size: 28px; font-weight: 700; letter-spacing: -.022em; line-height: 1.18; color: #f0f8ff; }
+.org-sub { font-size: 14px; color: var(--muted); margin-top: 7px; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 26px; }
+.kpi { background: var(--surface); padding: 16px 18px; }
+.kpi-label { font-family: var(--mono); font-size: 11.5px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); }
+.kpi-value { font-family: var(--mono); font-size: 26px; font-weight: 700; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.kpi-note { font-size: 11px; color: var(--dim); margin-top: 2px; }
+
+.org-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+/* No `background` shorthand here: it resets background-image, which is what
+   draws the dropdown arrow in base.html. Only what this rule actually needs. */
+.org-select { font-size: 12px; }
+.trend-box { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 18px 20px; margin-bottom: 26px; }
+.trend-title { font-family: var(--mono); font-size: 11.5px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+.spark-wrap { position: relative; display: flex; gap: 10px; align-items: stretch; }
+.spark-scale {
+  display: flex; flex-direction: column; justify-content: space-between;
+  font-family: var(--mono); font-size: 11px; color: var(--dim);
+  padding: 2px 0; flex-shrink: 0; text-align: right; min-width: 22px;
+}
+.spark { flex: 1; min-width: 0; height: 110px; display: block; overflow: visible; }
+.spark-grid { stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.spark-base { stroke: var(--border2); }
+.spark-dot { pointer-events: none; }
+.spark-hit { cursor: pointer; }
+.spark-hit:focus-visible { fill: var(--accent); fill-opacity: .1; outline: none; }
+.spark-tip {
+  position: absolute; z-index: 5; transform: translate(-50%, -100%);
+  background: var(--surface2); border: 1px solid var(--border2); border-radius: 5px;
+  padding: 6px 9px; font-family: var(--mono); font-size: 11.5px; color: var(--text);
+  white-space: nowrap; pointer-events: none; box-shadow: 0 6px 18px rgba(0,0,0,.5);
+}
+.spark-axis { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11.5px; color: var(--dim); margin-top: 6px; }
+
+.tbl-wrap { border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 720px; }
+th {
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .11em; text-transform: uppercase;
+  color: var(--muted); text-align: left; font-weight: 600; padding: 11px 14px;
+  border-bottom: 1px solid var(--border); background: var(--surface2); white-space: nowrap;
+}
+td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+tr:hover td { background: var(--surface2); }
+td.num, th.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.repo-link { font-family: var(--mono); font-size: 12.5px; color: var(--text); }
+.repo-link:hover { color: var(--accent); }
+.score-pill {
+  font-family: var(--mono); font-size: 13px; font-weight: 700; padding: 3px 9px;
+  border-radius: 4px; display: inline-block; min-width: 42px; text-align: center;
+}
+.p-green { background: rgba(0,204,106,.12); color: #00cc6a; border: 1px solid rgba(0,204,106,.25) }
+.p-blue  { background: rgba(68,136,255,.1); color: var(--blue); border: 1px solid rgba(68,136,255,.22) }
+.p-amber { background: rgba(255,170,0,.1); color: var(--amber); border: 1px solid rgba(255,170,0,.22) }
+.p-red   { background: rgba(255,68,102,.12); color: var(--red); border: 1px solid rgba(255,68,102,.25) }
+.p-gray  { background: var(--surface2); color: var(--dim); border: 1px solid var(--border) }
+.delta-up { color: #00cc6a } .delta-down { color: var(--red) } .delta-flat { color: var(--dim) }
+.crit-count { color: var(--red); font-weight: 600 }
+.warn-count { color: var(--amber) }
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+.upsell {
+  border: 1px solid var(--accent); background: rgba(0,255,136,.05); border-radius: 8px;
+  padding: 20px 22px; margin-bottom: 26px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+}
+.upsell p { color: var(--muted); font-size: 13px; max-width: 62ch; }
+.upsell strong { color: #f0f8ff; display: block; margin-bottom: 5px; font-size: 15px; }
+.upsell a {
+  font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .05em;
+  padding: 10px 20px; background: var(--accent); color: var(--bg); border-radius: 4px; white-space: nowrap;
+}
+
+/* Touch targets. A pointer that is a fingertip needs a control it can hit:
+   the copy button was 12px tall, the section toggles 22-23px, both under the
+   24px floor and well under the 44px this product promised when it grew a
+   mobile layout. Inline links inside a sentence are left alone — the exemption
+   exists because padding them out breaks the line. */
+@media (pointer: coarse), (max-width: 700px) {
+  .repo-link { display: inline-flex; align-items: center; min-height: 40px; }
+}
+{% endblock %}
+
+{% block content %}
+<div class="org-wrap">
+  <div class="org-head">
+    <div>
+      <h1 class="org-title">{% trans "Overview" %}</h1>
+      <div class="org-sub">{% trans "Every repository you audit, newest run first." %}</div>
+    </div>
+    {% comment %}
+      Nothing to sort until there is something to sort. An empty page whose only
+      control does nothing reads as a page that failed to load.
+    {% endcomment %}
+    {% if rows %}
+    <div class="org-controls">
+      <form method="get" style="display:flex;gap:8px">
+        {% if owners %}
+        <select name="owner" class="org-select" aria-label="{% trans 'Filter by owner' %}" onchange="this.form.submit()">
+          <option value="">{% trans "All owners" %}</option>
+          {% for o in owners %}
+          <option value="{{ o }}" {% if o == selected_owner %}selected{% endif %}>{{ o }}</option>
+          {% endfor %}
+        </select>
+        {% endif %}
+        <select name="sort" class="org-select" aria-label="{% trans 'Sort repositories' %}" onchange="this.form.submit()">
+          <option value="score" {% if sort == 'score' %}selected{% endif %}>{% trans "Lowest score first" %}</option>
+          <option value="score_desc" {% if sort == 'score_desc' %}selected{% endif %}>{% trans "Highest score first" %}</option>
+          <option value="crit" {% if sort == 'crit' %}selected{% endif %}>{% trans "Most critical issues" %}</option>
+          <option value="recent" {% if sort == 'recent' %}selected{% endif %}>{% trans "Most recent run" %}</option>
+          <option value="name" {% if sort == 'name' %}selected{% endif %}>{% trans "Name" %}</option>
+        </select>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if is_team %}
+  <p style="margin:0 0 16px;font-size:13px"><a href="{% url 'digest_settings' %}" style="color:var(--accent)">{% trans "Weekly digest: recipients, day and preview" %} →</a></p>
+  {% endif %}
+
+  {% if not is_team and rows %}
+  <div class="upsell">
+    <div style="flex:1;min-width:260px">
+      <strong>{% trans "Pull request comments and weekly trends are on the Team plan" %}</strong>
+      <p>{% trans "This view works on every plan. Team adds a score comment on each pull request, so the number shows up where the work happens rather than only here." %}</p>
+    </div>
+    <a href="{% url 'billing' %}">{% trans "See Team" %} →</a>
+  </div>
+  {% endif %}
+
+  {% if rows %}
+  <div class="kpis">
+    <div class="kpi">
+      <div class="kpi-label">{% trans "Repositories" %}</div>
+      <div class="kpi-value">{{ repo_count }}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">{% trans "Average score" %}</div>
+      <div class="kpi-value" style="color:{% if avg_score >= 80 %}#00cc6a{% elif avg_score >= 60 %}var(--blue){% elif avg_score >= 40 %}var(--amber){% else %}var(--red){% endif %}">{{ avg_score }}</div>
+      <div class="kpi-note">{% trans "across all repositories" %}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">{% trans "Critical issues" %}</div>
+      <div class="kpi-value" style="color:{% if total_crit %}var(--red){% else %}#00cc6a{% endif %}">{{ total_crit }}</div>
+      <div class="kpi-note">{% trans "open right now" %}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">{% trans "Needs attention" %}</div>
+      <div class="kpi-value" style="color:{% if needs_attention %}var(--amber){% else %}#00cc6a{% endif %}">{{ needs_attention }}</div>
+      <div class="kpi-note">{% blocktrans with n=attention_score %}scoring under {{ n }}{% endblocktrans %}</div>
+    </div>
+  </div>
+
+  <div class="trend-box">
+    <div class="trend-title">
+      {% trans "Average score by week" %}
+      {% if spark %}<span style="float:right;color:var(--text)">{{ spark.last }}{% if spark.count > 1 %} <span style="color:var(--dim)">{% blocktrans with was=spark.first %}was {{ was }}{% endblocktrans %}</span>{% endif %}</span>{% endif %}
+    </div>
+    {% if spark %}
+    {% comment %}
+      stroke-width was .8 with non-scaling-stroke — that is 0.8 of a CSS pixel,
+      a hairline, which is why the trend was invisible. Lines are 2px. The end
+      marker was a <circle> in viewBox units, and preserveAspectRatio="none"
+      stretched it into an ellipse; a zero-length round-capped line with a
+      non-scaling stroke draws a true 9px dot at any container width.
+    {% endcomment %}
+    <div class="spark-wrap">
+      <div class="spark-scale" aria-hidden="true"><span>100</span><span>50</span><span>0</span></div>
+      <svg class="spark" viewBox="0 0 {{ spark.width }} {{ spark.height }}" preserveAspectRatio="none"
+           role="img" aria-labelledby="spark-desc">
+        <title id="spark-desc">{% blocktrans with first=spark.first last=spark.last n=spark.count %}Average score by week: {{ n }} weeks, from {{ first }} to {{ last }} out of 100.{% endblocktrans %}</title>
+        <defs>
+          <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="{{ spark_color }}" stop-opacity=".30"/>
+            <stop offset="100%" stop-color="{{ spark_color }}" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        {# Recessive reference lines, so a height means something. #}
+        <line class="spark-grid" x1="0" y1="2" x2="{{ spark.width }}" y2="2"/>
+        <line class="spark-grid" x1="0" y1="15" x2="{{ spark.width }}" y2="15"/>
+        <line class="spark-grid spark-base" x1="0" y1="28" x2="{{ spark.width }}" y2="28"/>
+        <path d="{{ spark.area }}" fill="url(#sparkFill)"/>
+        <polyline points="{{ spark.points }}" fill="none" stroke="{{ spark_color }}" stroke-width="2"
+                  stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+        {% for c in spark.coords %}
+        <line class="spark-dot" x1="{{ c.x }}" y1="{{ c.y }}" x2="{{ c.x }}" y2="{{ c.y }}"
+              stroke="{{ spark_color }}" stroke-width="{% if forloop.last %}9{% else %}5{% endif %}"
+              stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+        {% endfor %}
+        {# A 5px dot is a hard thing to hit. The target is a full column. #}
+        {% for c in spark.coords %}
+        <rect class="spark-hit" x="{{ c.hit_x }}" y="0" width="{{ c.hit_w }}" height="{{ spark.height }}"
+              fill="transparent" pointer-events="all" tabindex="0" role="img"
+              aria-label="{{ c.label }}: {{ c.value }}/100"
+              data-label="{{ c.label }}" data-score="{{ c.value }}"/>
+        {% endfor %}
+      </svg>
+      <div class="spark-tip" id="spark-tip" hidden></div>
+    </div>
+    <div class="spark-axis">
+      <span>{{ trend.0.week }}</span>
+      {% with newest=trend|last %}<span>{{ newest.week }}</span>{% endwith %}
+    </div>
+    <script>
+    // A chart with no way to read a value is a decoration. Hover or focus any
+    // reading and it says which week it is and what the score was.
+    (function () {
+      const tip = document.getElementById('spark-tip');
+      const wrap = document.querySelector('.spark-wrap');
+      if (!tip || !wrap) return;
+      const dots = document.querySelectorAll('.spark-dot');
+      document.querySelectorAll('.spark-hit').forEach(function (hit, i) {
+        const show = function () {
+          // The hit target is a full-height column; the tooltip belongs above
+          // the reading, so it takes its position from the dot.
+          const mark = dots[i] || hit;
+          const r = mark.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+          tip.textContent = hit.dataset.label + ' · ' + hit.dataset.score + '/100';
+          tip.style.left = (r.left + r.width / 2 - w.left) + 'px';
+          tip.style.top = (r.top + r.height / 2 - w.top - 10) + 'px';
+          tip.hidden = false;
+        };
+        const hide = function () { tip.hidden = true; };
+        hit.addEventListener('mouseenter', show);
+        hit.addEventListener('focus', show);
+        hit.addEventListener('mouseleave', hide);
+        hit.addEventListener('blur', hide);
+      });
+    })();
+    </script>
+    {% else %}
+    <p style="color:var(--dim);font-size:12px">{% trans "Run audits over a few weeks and the trend appears here." %}</p>
+    {% endif %}
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>{% trans "Repository" %}</th>
+          <th class="num">{% trans "Score" %}</th>
+          <th class="num">{% trans "Change" %}</th>
+          <th class="num">{% trans "Critical" %}</th>
+          <th class="num">{% trans "Warnings" %}</th>
+          <th class="num">{% trans "Last run" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>
+            <a class="repo-link" href="{% url 'audit_detail' row.audit.id %}">{{ row.name }}</a>
+            <span style="font-family:var(--mono);font-size: 11px;color:var(--dim);margin-left:8px">{{ row.source|upper }}</span>
+          </td>
+          <td class="num"><span class="score-pill p-{{ row.audit.score_color }}">{{ row.score }}</span></td>
+          <td class="num">
+            {% if row.delta is None %}<span class="delta-flat">—</span>
+            {% elif row.delta > 0 %}<span class="delta-up">▲ +{{ row.delta }}</span>
+            {% elif row.delta < 0 %}<span class="delta-down">▼ {{ row.delta }}</span>
+            {% else %}<span class="delta-flat">0</span>{% endif %}
+          </td>
+          <td class="num">{% if row.crit %}<span class="crit-count">{{ row.crit }}</span>{% else %}0{% endif %}</td>
+          <td class="num">{% if row.warn %}<span class="warn-count">{{ row.warn }}</span>{% else %}0{% endif %}</td>
+          <td class="num" style="color:var(--muted)">{{ row.ran_at|date:"j M, H:i" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <p style="margin-bottom:16px">{% trans "No completed audits yet. Run one and it will appear here." %}</p>
+    <a href="{% url 'dashboard' %}" style="color:var(--accent);font-family:var(--mono);font-size:13px">{% trans "Go to repositories" %} →</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}{% endblock %}

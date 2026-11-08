@@ -1,0 +1,5 @@
+expected_type: iac
+checks:
+  lockfile_present: na
+  dockerfile_present: na
+  container_nonroot: na

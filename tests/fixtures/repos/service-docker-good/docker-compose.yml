@@ -1,0 +1,9 @@
+services:
+  web:
+    build: .
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+    deploy:
+      resources:
+        limits:
+          memory: 512M

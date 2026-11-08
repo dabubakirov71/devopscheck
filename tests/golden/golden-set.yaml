@@ -1,0 +1,269 @@
+# Затравка живого эталонного набора для DevOps Audit (методика v2).
+# ВАЖНО: все записи verified: false. Ожидания составлены по публично известной
+# структуре репозиториев и ДОЛЖНЫ быть проверены вручную на зафиксированном SHA.
+# ref: HEAD default-ветки на 2026-09-26 (агент закрепил; ожидания не менялись).
+# Перечислены только утверждаемые проверки; остальные в прогоне не сравниваются.
+# Имена проверок условные — сопоставить с реальными ID на этапе 0.
+
+version: 1
+repos:
+
+  - repo: fastapi/fastapi
+    platform: github
+    ref: 50113da16fec53b66b80d75e80a89296de4fa5a5   # HEAD on 2026-09-26
+    verified: false
+    expected_type: library
+    checks:
+      tests_in_ci: pass
+      dockerfile_present: na
+      container_nonroot: na
+      dockerfile_multistage: na
+      base_image_pinned: na
+      dockerignore: na
+      healthcheck: na
+      compose_resource_limits: na
+      observability: na
+      changelog: pass          # docs/en/docs/release-notes.md
+    notes: Главный кейс с лендинга. Проверить наличие SECURITY.md и CONTRIBUTING.
+
+  - repo: django/django
+    platform: github
+    ref: a013c821ea7838a953869615b0bdcfdb298cc09f   # HEAD on 2026-09-26
+    verified: false
+    expected_type: library
+    checks:
+      tests_in_ci: pass
+      readme: pass             # README.rst
+      contributing: pass       # CONTRIBUTING.rst
+      changelog: pass          # docs/releases/
+      dockerfile_present: na
+      observability: na
+    notes: Проверка расширения .rst и changelog в виде каталога docs/releases/.
+
+  - repo: expressjs/express
+    platform: github
+    ref: 9a34acf03cb818ff3f8bc40e44176e277a25cbb9   # HEAD on 2026-09-26
+    verified: false
+    expected_type: library
+    checks:
+      tests_in_ci: pass
+      changelog: pass          # History.md
+      lockfile_present: na     # npm-библиотеки часто не коммитят lock-файл
+      dockerfile_present: na
+      observability: na
+    notes: Альтернативное имя changelog.
+
+  - repo: sindresorhus/awesome
+    platform: github
+    ref: bc98e517ddca672f55f9857d714fc3ea3c3540b2   # HEAD on 2026-09-26
+    verified: false
+    expected_type: docs
+    checks:
+      tests_in_ci: na
+      dockerfile_present: na
+      dependency_manifest: na
+      lockfile_present: na
+      observability: na
+      changelog: na
+      license: pass
+    notes: Контрольный репозиторий без кода — почти всё должно быть na, без падения.
+
+  - repo: terraform-aws-modules/terraform-aws-vpc
+    platform: github
+    ref: b3abd6df2ecf052451a361ed55b8f06f8742a795   # HEAD on 2026-09-26
+    verified: false
+    expected_type: iac
+    checks:
+      dockerfile_present: na
+      observability: na
+      lockfile_present: na     # модули обычно не коммитят .terraform.lock.hcl
+      changelog: pass
+    notes: Terraform-модуль.
+
+  - repo: prometheus-community/helm-charts
+    platform: github
+    ref: 05e56a85a59983eb4769de9807222d4299c04d79   # HEAD on 2026-09-26
+    verified: false
+    expected_type: iac
+    checks:
+      tests_in_ci: pass        # chart-testing (lint/install) в workflow
+      dockerfile_present: na
+      observability: na
+    notes: Helm-чарты; монорепо чартов.
+
+  - repo: grafana/grafana
+    platform: github
+    ref: d14c2a5ea750f675cf36f3bc5e7d38d1857a6c46   # HEAD on 2026-09-26
+    verified: false
+    expected_type: service
+    checks:
+      dockerfile_present: pass
+      container_nonroot: pass
+      tests_in_ci: pass
+      observability: pass
+    notes: Контрольный сервис с хорошей практикой; большой репозиторий — проверить время скана.
+
+  - repo: gitlab-org/gitlab-runner
+    platform: gitlab
+    ref: 0e3fe7d3f8c157eb8c0b99ac33c2dd14192a7e87   # HEAD on 2026-09-26
+    verified: false
+    expected_type: service
+    checks:
+      tests_in_ci: pass        # тесты в файлах, подключённых через include:
+    notes: "Проверка разбора include: в .gitlab-ci.yml."
+
+
+  # ── Добавлено агентом 2026-09-26: небольшие реальные проекты (ловят ложные PASS). ──
+  # Ожидания размечены агентом по снапшоту на ref; verified: false — проверяет владелец.
+
+  - repo: miguelgrinberg/microblog
+    platform: github
+    ref: a975ef64864354867c88e0ed3a17ba7d17dca752
+    verified: false
+    expected_type: service
+    checks:
+      tests_in_ci: fail  # CI нет вовсе
+      dockerfile_present: pass
+      container_nonroot: fail  # нет USER
+      base_image_pinned: fail  # python:slim
+      license: pass
+
+  - repo: dockersamples/example-voting-app
+    platform: github
+    ref: 63e9150ca17af4ed05880d4245e486481f73fcb4
+    verified: false
+    expected_type: service
+    checks:
+      tests_in_ci: fail  # workflows только собирают образы
+      dockerfile_present: pass  # vote/, result/, worker/
+      container_nonroot: fail  # ни в одном Dockerfile нет USER
+      license: pass
+
+  - repo: docker/getting-started-app
+    platform: github
+    ref: 6b025fc53bc7b9bef435d6b09bcd1da5a871c9cc
+    verified: false
+    expected_type: service
+    checks:
+      tests_in_ci: fail  # CI нет
+      dockerfile_present: fail
+      container_nonroot: na
+      dockerfile_multistage: na
+      base_image_pinned: na
+      healthcheck: na
+      lockfile_present: pass
+      license: fail
+
+  - repo: gothinkster/node-express-realworld-example-app
+    platform: github
+    ref: 30b68e1e881462b2f4164ea09ab4c4f5699c7b0b
+    verified: false
+    expected_type: service
+    checks:
+      tests_in_ci: fail  # CI нет
+      dockerfile_present: pass
+      container_nonroot: fail
+      lockfile_present: pass
+      license: fail
+
+  - repo: testdrivenio/fastapi-tdd-docker
+    platform: github
+    ref: 16433b6621e9afd801de8eba9738a6bfefb1f601
+    verified: false
+    expected_type: service
+    checks:
+      tests_in_ci: pass  # main.yml: docker exec ... python -m pytest
+      dockerfile_present: pass  # project/Dockerfile
+      dockerfile_multistage: pass  # project/Dockerfile.prod
+      license: pass
+
+  - repo: nsidnev/fastapi-realworld-example-app
+    platform: github
+    ref: 029eb7781c60d5f563ee8990a0cbfb79b244538c
+    verified: false
+    expected_type: service
+    checks:
+      tests_in_ci: pass  # tests.yml: poetry run ./scripts/test
+      dockerfile_present: pass
+      container_nonroot: fail
+      base_image_pinned: pass
+      lockfile_present: pass  # poetry.lock
+      readme: pass  # README.rst
+      license: pass
+
+  - repo: gothinkster/django-realworld-example-app
+    platform: github
+    ref: 29c9d42831fa0cfc5a4aa7561f674396eacf20a2
+    verified: false
+    expected_type: service
+    checks:
+      tests_in_ci: fail  # CI нет
+      dockerfile_present: fail
+      container_nonroot: na
+      dockerfile_multistage: na
+      base_image_pinned: na
+      dockerignore: na
+      license: fail
+
+  - repo: bradtraversy/devconnector_2.0
+    platform: github
+    ref: 0da5372c1f26d5e3f7d419844b4c23e9872909b1
+    verified: false
+    expected_type: service
+    checks:
+      tests_in_ci: fail  # CI нет
+      dockerfile_present: fail
+      container_nonroot: na
+      dockerignore: na
+      lockfile_present: fail  # нет package-lock.json
+      license: fail
+
+  - repo: sahat/hackathon-starter
+    platform: github
+    ref: 14229eff8f9b892038ed30d0a338312f3b9d60d2
+    verified: false
+    expected_type: service
+    checks:
+      tests_in_ci: pass  # build.yml: npm run test
+      changelog: pass
+      security_policy: pass
+      lockfile_present: pass
+      license: pass
+
+  - repo: TryGhost/Ghost-CLI
+    platform: github
+    ref: 6558d58bf97f7bcdce60823af6bb2434bf8f3397
+    verified: false
+    expected_type: library
+    checks:
+      tests_in_ci: pass  # ci.yml
+      changelog: pass
+      security_policy: pass
+      contributing: pass  # .github/CONTRIBUTING.md
+      license: pass
+      dockerfile_present: na
+      observability: na
+  # ── Добавлено 2026-09-26 после пересчёта прода: библиотеки на Go и Java,
+  # которые v3 ошибочно назвал сервисами. verified: false.
+  - repo: gin-gonic/gin
+    platform: github
+    ref: 1bd0ecf2d3e08da37efa270bb7be20c1eddb0d68
+    verified: false
+    expected_type: library
+    checks:
+      tests_in_ci: pass
+      dockerfile_present: na
+      container_nonroot: na
+      observability: na
+      license: pass
+    notes: Go-библиотека (package gin в корне, нет cmd/ и main).
+  - repo: spring-projects/spring-boot
+    platform: github
+    ref: ef67de058ed35c0f6246d47abdb09fbdd4ce5c1a
+    verified: false
+    expected_type: library
+    checks:
+      dockerfile_present: na
+      observability: na
+      license: pass
+    notes: Java-фреймворк (Gradle, публикуется в Maven Central).

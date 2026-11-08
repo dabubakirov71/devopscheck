@@ -1,0 +1,32 @@
+{% extends "app/base.html" %}
+{% load i18n app_extras %}
+
+{% block title %}{% trans "DevOps and security checks for GitHub and GitLab repositories" %} — DevOpsCheck{% endblock %}
+{% block meta_description %}{% blocktrans %}{{ total }} guides: what each DevOps and security check means, why it matters and how to fix it — Docker, CI/CD, GitHub Actions, secrets, Terraform, dependencies.{% endblocktrans %}{% endblock %}
+{% block canonical %}{% localized canonical %}{% endblock %}
+
+{% block extra_style %}
+.ci-wrap { max-width: 860px; margin: 0 auto; padding: 48px 24px 80px; }
+.ci-wrap h1 { font-size: clamp(25px, 4vw, 34px); font-weight: 800; letter-spacing: -.02em; color: #f0f8ff; margin-bottom: 12px; }
+.ci-lead { color: var(--muted); font-size: 15px; line-height: 1.7; margin-bottom: 32px; }
+.ci-lead a { color: var(--accent); }
+.ci-group { margin-bottom: 28px; }
+.ci-group h2 { font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--text); margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.ci-group ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.ci-group a { color: var(--text); font-size: 14.5px; text-decoration: none; display: block; padding: 7px 0; overflow-wrap: anywhere; }
+.ci-group a:hover, .ci-group a:focus-visible { color: var(--accent); }
+@media (max-width: 640px) { .ci-wrap { padding: 32px 16px 60px; } }
+{% endblock %}
+
+{% block content %}
+<div class="ci-wrap">
+  <h1>{% trans "DevOps and security checks" %}</h1>
+  <p class="ci-lead">{% blocktrans %}What each of the {{ total }} checks looks for, why it matters, and how to fix it.{% endblocktrans %} <a href="{% url 'scan_index' %}">{% trans "Scan a public repository for free" %} →</a></p>
+  {% for title, items in groups %}
+  <section class="ci-group">
+    <h2>{% trans title %}</h2>
+    <ul>{% for g in items %}<li><a href="{% url 'check_guide' g.check_id %}">{{ g.title }}</a></li>{% endfor %}</ul>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

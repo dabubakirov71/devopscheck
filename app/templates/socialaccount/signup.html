@@ -1,0 +1,60 @@
+{% extends "app/auth_base.html" %}
+{% load i18n %}
+{% comment %}
+  Shown when a GitHub/GitLab/Google sign-in cannot create the account on its
+  own: the username is taken, or the provider's email already belongs to an
+  account here. This used to be a meta-refresh to /profile/ — which, for
+  someone not signed in, bounced straight back to the login page with no word
+  of what happened. Every social sign-in by a person who already had an
+  account ended that way.
+{% endcomment %}
+{% block title %}{% trans "One more step" %}{% endblock %}
+{% block extra_style %}
+    .note { font-size: 13px; line-height: 1.55; color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px; padding: 12px 14px; margin-bottom: 16px; }
+    .note a { color: var(--accent); font-weight: 500; }
+    .field-error { font-size: 12px; color: var(--red); margin-top: 6px; line-height: 1.45; }
+{% endblock %}
+{% block card %}
+{% with provider=account.get_provider.name %}
+<div class="card">
+  <div class="card-head">
+    <div class="card-eyebrow">// {{ provider }}</div>
+    <div class="card-title">{% trans "One more step" %}</div>
+    <div class="card-sub">{% blocktrans %}{{ provider }} confirmed who you are. Choose how your account here should be named, and you are in.{% endblocktrans %}</div>
+  </div>
+  <div class="card-body">
+    {% if form.email.errors or form.email_taken %}
+    <div class="note">
+      {% blocktrans %}An account with this email already exists here. Sign in to it the way you did before — with your password, or with the provider you used the first time — then connect {{ provider }} on the profile page.{% endblocktrans %}
+      <br><a href="{% url 'login' %}?next=/profile/%23connect">{% trans "Sign in to my account" %} →</a>
+    </div>
+    {% endif %}
+    {% for e in form.non_field_errors %}<div class="error">{{ e }}</div>{% endfor %}
+
+    <form method="post" action="{% url 'socialaccount_signup' %}">
+      {% csrf_token %}
+      {% if form.username %}
+      <div class="fg">
+        <label class="fl" for="id_username">{% trans "Username" %}</label>
+        <input id="id_username" class="fi" type="text" name="username" required autocomplete="username" value="{{ form.username.value|default:'' }}">
+        {% for e in form.username.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+      </div>
+      {% endif %}
+      {% if form.email %}
+      <div class="fg">
+        <label class="fl" for="id_email">Email</label>
+        <input id="id_email" class="fi" type="email" name="email" autocomplete="email" value="{{ form.email.value|default:'' }}">
+        {% for e in form.email.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+        <p class="fl-hint">{% trans "Where the finished report and the notice before your access lapses are sent." %}</p>
+      </div>
+      {% endif %}
+      {{ redirect_field }}
+      <button type="submit" class="btn-submit">{% trans "Create account" %} →</button>
+    </form>
+  </div>
+  <div class="card-foot">
+    {% trans "Already have an account? " %}<a href="{% url 'login' %}">{% trans "Sign in" %}</a>
+  </div>
+</div>
+{% endwith %}
+{% endblock %}

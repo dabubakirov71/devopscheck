@@ -1,0 +1,2 @@
+{% comment %}allauth's LOGIN_URL page; the product's own sign-in lives at /login/. Keep ?next= so the visitor lands where they were going.{% endcomment %}<!DOCTYPE html>
+<html><head><meta http-equiv="refresh" content="0;url=/login/{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}"></head><body></body></html>

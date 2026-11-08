@@ -1,0 +1,88 @@
+{% extends "app/base.html" %}
+{% load i18n app_extras %}
+
+{% block title %}{{ g.title }} — DevOpsCheck{% endblock %}
+{% block meta_description %}{{ g.why|truncatechars:155 }}{% endblock %}
+{% block canonical %}{% localized canonical %}{% endblock %}
+{% block og_title %}{{ g.title }}{% endblock %}
+{% block og_description %}{{ g.why|truncatechars:190 }}{% endblock %}
+{% block twitter_title %}{{ g.title }}{% endblock %}
+{% block twitter_description %}{{ g.why|truncatechars:190 }}{% endblock %}
+
+{% block extra_style %}
+.cg-wrap { max-width: 780px; margin: 0 auto; padding: 48px 24px 80px; }
+.cg-crumb { font-family: var(--mono); font-size: 12px; color: var(--dim); margin-bottom: 18px; }
+.cg-crumb a { color: var(--dim); }
+.cg-wrap h1 { font-size: clamp(25px, 4vw, 34px); font-weight: 800; letter-spacing: -.02em; line-height: 1.2; color: #f0f8ff; margin-bottom: 14px; }
+.cg-meta { font-family: var(--mono); font-size: 11.5px; color: var(--dim); margin-bottom: 26px; text-transform: uppercase; letter-spacing: .08em; }
+.cg-section { margin-bottom: 32px; }
+.cg-section h2 { font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--text); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.cg-section p, .cg-fix { color: var(--muted); font-size: 15px; line-height: 1.75; }
+.cg-fix pre { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px; overflow-x: auto; font-size: 12.5px; line-height: 1.6; margin: 12px 0; max-width: 100%; }
+.cg-fix code { font-family: var(--mono); font-size: 12.5px; }
+.cg-rec { white-space: pre-wrap; font-family: var(--mono); font-size: 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px; overflow-x: auto; }
+.cg-cta { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 22px; margin: 36px 0; }
+.cg-cta h3 { font-size: 17px; color: #f0f8ff; margin-bottom: 8px; }
+.cg-cta p { color: var(--muted); font-size: 14px; margin-bottom: 14px; }
+.cg-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.cg-form input { flex: 1 1 220px; min-width: 0; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 11px 12px; font-family: var(--mono); font-size: 13px; }
+.cg-form button { background: var(--accent); color: var(--bg); border: 0; border-radius: 6px; padding: 11px 18px; font-family: var(--mono); font-weight: 700; font-size: 13px; cursor: pointer; min-height: 44px; }
+.cg-form input:focus-visible, .cg-form button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cg-links { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.cg-links a { color: var(--accent); font-size: 14px; overflow-wrap: anywhere; }
+@media (max-width: 640px) { .cg-wrap { padding: 32px 16px 60px; } }
+{% endblock %}
+
+{% block content %}
+<article class="cg-wrap">
+  <nav class="cg-crumb" aria-label="{% trans 'Breadcrumb' %}"><a href="{% url 'checks_index' %}">{% trans "DevOps checks" %}</a> / {{ g.check_id }}</nav>
+  <h1>{{ g.title }}</h1>
+  <div class="cg-meta">{{ g.name }} · {{ g.check_id }}</div>
+
+  <section class="cg-section">
+    <h2>{% trans "Why it matters" %}</h2>
+    <p>{{ g.why }}</p>
+  </section>
+
+  <section class="cg-section">
+    <h2>{% trans "How to fix it" %}</h2>
+    {% if g.fix_markdown %}<div class="cg-fix">{{ g.fix_markdown|markdown_code|safe }}</div>
+    {% elif g.recommendation %}<div class="cg-rec">{{ g.recommendation }}</div>{% endif %}
+  </section>
+
+  <div class="cg-cta">
+    <h3>{% trans "Does your repository pass this check?" %}</h3>
+    <p>{% blocktrans %}Free for public GitHub repositories, no account needed. Up to {{ check_count }} DevOps and security checks in about {{ scan_seconds }} seconds.{% endblocktrans %}</p>
+    <form class="cg-form" method="post" action="{% url 'scan_submit' %}">{% csrf_token %}
+      <label class="sr-only" for="cg-repo">{% trans "Repository" %}</label>
+      <input id="cg-repo" type="text" name="repo" required placeholder="owner/repo" autocomplete="off">
+      <button type="submit">{% trans "Scan" %} →</button>
+    </form>
+  </div>
+
+  {% if failing %}
+  <section class="cg-section">
+    <h2>{% trans "Public repositories where this check fails" %}</h2>
+    <ul class="cg-links">{% for name in failing %}<li><a href="/scan/{{ name }}/">{{ name }}</a></li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  {% if related %}
+  <section class="cg-section">
+    <h2>{% trans "Related checks" %}</h2>
+    <ul class="cg-links">{% for r in related %}<li><a href="{% url 'check_guide' r.check_id %}">{{ r.title }}</a></li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+</article>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@graph": [
+ {"@type": "TechArticle", "headline": "{{ g.title|escapejs }}", "description": "{{ g.why|escapejs }}",
+  "inLanguage": "{{ LANGUAGE_CODE }}", "url": "{% localized canonical %}",
+  "publisher": {"@type": "Organization", "name": "DevOpsCheck", "url": "{{ base_url }}/"}},
+ {"@type": "BreadcrumbList", "itemListElement": [
+  {"@type": "ListItem", "position": 1, "name": "{% filter escapejs %}{% trans 'DevOps checks' %}{% endfilter %}", "item": "{{ base_url }}{{ lang_prefix }}/checks/"},
+  {"@type": "ListItem", "position": 2, "name": "{{ g.title|escapejs }}", "item": "{% localized canonical %}"}]}
+]}
+</script>
+<style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}</style>
+{% endblock %}

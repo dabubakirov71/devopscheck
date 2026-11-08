@@ -1,0 +1,86 @@
+{% extends "app/base.html" %}
+{% load i18n app_extras %}
+
+{% block title %}{% blocktrans %}{{ org }} on GitHub: DevOps and security score{% endblocktrans %} — {{ product_name }}{% endblock %}
+{% block meta_description %}{% if average is not None %}{% blocktrans count n=done %}{{ org }}: {{ n }} public repository scanned, average score {{ average }}/100 — the weakest ones and the findings that repeat.{% plural %}{{ org }}: {{ n }} public repositories scanned, average score {{ average }}/100 — the weakest ones and the findings that repeat.{% endblocktrans %}{% else %}{% blocktrans %}DevOps and security scan of {{ org }}'s public GitHub repositories.{% endblocktrans %}{% endif %}{% endblock %}
+{% block canonical %}{% localized canonical %}{% endblock %}
+{% block robots %}{% if running or done < 3 %}noindex, follow{% else %}index, follow, max-image-preview:large{% endif %}{% endblock %}
+
+{% block extra_style %}
+.og-wrap { max-width: 900px; margin: 0 auto; padding: 44px 24px 80px; }
+.og-crumb { font-family: var(--mono); font-size: 12px; color: var(--dim); margin-bottom: 14px; }
+.og-crumb a { color: var(--dim); }
+.og-wrap h1 { font-size: clamp(25px, 4vw, 34px); font-weight: 800; color: #f0f8ff; margin-bottom: 8px; overflow-wrap: anywhere; }
+.og-sub { color: var(--muted); font-size: 14.5px; margin-bottom: 28px; }
+.og-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 32px; }
+.og-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.og-tile .v { font-size: 30px; font-weight: 800; color: #f0f8ff; }
+.og-tile .k { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); margin-top: 4px; }
+.og-sec { margin-bottom: 30px; }
+.og-sec h2 { font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--text); margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.og-row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.og-row a { color: var(--text); overflow-wrap: anywhere; min-width: 0; }
+.og-row a:hover, .og-row a:focus-visible { color: var(--accent); }
+.og-row .n { font-family: var(--mono); color: var(--muted); white-space: nowrap; }
+.s-g { color: #00cc6a; } .s-b { color: var(--blue, #4488ff); } .s-a { color: var(--amber, #ffaa00); } .s-r { color: var(--red, #ff4466); }
+.og-cta { background: var(--surface); border: 1px solid var(--accent); border-radius: 10px; padding: 22px; margin: 34px 0; }
+.og-cta h3 { color: #f0f8ff; font-size: 18px; margin-bottom: 8px; }
+.og-cta p { color: var(--muted); font-size: 14px; margin-bottom: 14px; }
+.og-cta a { display: inline-block; background: var(--accent); color: var(--bg); font-weight: 700; border-radius: 6px; padding: 11px 18px; text-decoration: none; min-height: 44px; }
+.og-cta a:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.og-running { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+@media (max-width: 640px) { .og-wrap { padding: 30px 16px 60px; } }
+{% endblock %}
+
+{% block content %}
+{% if running %}<meta http-equiv="refresh" content="6">{% endif %}
+<div class="og-wrap">
+  <nav class="og-crumb" aria-label="{% trans 'Breadcrumb' %}"><a href="{% url 'scan_index' %}">{% trans "Free scanner" %}</a> / {% trans "organization" %}</nav>
+  <h1>{{ org }}</h1>
+  <p class="og-sub">{% blocktrans with total=row.total_public max=row.MAX_REPOS %}The most starred public repositories, up to {{ max }}, out of {{ total }} that are not forks or archived.{% endblocktrans %} <a href="https://github.com/{{ org }}" rel="nofollow noopener" target="_blank" style="color:var(--accent)">GitHub ↗</a></p>
+
+  {% if row.status == 'failed' %}
+    <p class="og-running" role="alert">{{ row.error_message }}</p>
+  {% else %}
+  {% if running %}<p class="og-running" role="status">{% blocktrans %}Scanning: {{ done }} done, {{ pending }} to go. This page refreshes by itself.{% endblocktrans %}</p>{% endif %}
+
+  <div class="og-tiles">
+    <div class="og-tile"><div class="v">{% if average is not None %}{{ average }}{% else %}—{% endif %}</div><div class="k">{% trans "average score" %}</div></div>
+    <div class="og-tile"><div class="v">{{ done }}</div><div class="k">{% trans "repositories scanned" %}</div></div>
+    <div class="og-tile"><div class="v">{{ secrets }}</div><div class="k">{% trans "with committed secrets" %}</div></div>
+  </div>
+
+  {% if worst %}
+  <section class="og-sec">
+    <h2>{% trans "Weakest repositories" %}</h2>
+    {% for s in worst %}<div class="og-row"><a href="/scan/{{ s.repo_full_name }}/">{{ s.repo_full_name }}</a><span class="n {% if s.score >= 80 %}s-g{% elif s.score >= 60 %}s-b{% elif s.score >= 40 %}s-a{% else %}s-r{% endif %}">{{ s.score }}/100</span></div>{% endfor %}
+  </section>
+  {% endif %}
+
+  {% if common %}
+  <section class="og-sec">
+    <h2>{% trans "Findings that repeat across repositories" %}</h2>
+    {% for cid, name, n, has_guide in common %}<div class="og-row">{% if has_guide %}<a href="{% url 'check_guide' cid %}">{{ name|trans_str }}</a>{% else %}<span>{{ name|trans_str }}</span>{% endif %}<span class="n">{% blocktrans count n=n %}{{ n }} repository{% plural %}{{ n }} repositories{% endblocktrans %}</span></div>{% endfor %}
+  </section>
+  {% endif %}
+  {% endif %}
+
+  <div class="og-cta">
+    <h3>{% trans "See the private repositories too — and fix them in one go" %}</h3>
+    {% if github_app_enabled %}
+    <p>{% trans "Install the GitHub App on the organization and choose which repositories it may read — private ones included. Their fixes arrive as pull requests." %}</p>
+    <a href="{% url 'github_app_install' %}">{% trans "Connect the organization" %} →</a>
+    {% else %}
+    <p>{% trans "Sign in with GitHub to audit the organization's private repositories as well. Their fixes arrive as pull requests." %}</p>
+    <a href="{% url 'register' %}?next=/connect/">{% trans "Audit private repositories" %} →</a>
+    {% endif %}
+  </div>
+
+  {% if scans %}
+  <section class="og-sec">
+    <h2>{% trans "All scanned repositories" %}</h2>
+    {% for s in scans %}<div class="og-row"><a href="/scan/{{ s.repo_full_name }}/">{{ s.repo_full_name }}</a><span class="n">{{ s.score }}/100</span></div>{% endfor %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

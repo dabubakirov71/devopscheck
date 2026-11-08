@@ -1,0 +1,116 @@
+# Затравка живого эталонного набора для DevOps Audit (методика v2).
+# ВАЖНО: все записи verified: false. Ожидания составлены по публично известной
+# структуре репозиториев и ДОЛЖНЫ быть проверены вручную на зафиксированном SHA.
+# ref заполняется при разметке (текущий HEAD default-ветки на момент проверки).
+# Перечислены только утверждаемые проверки; остальные в прогоне не сравниваются.
+# Имена проверок условные — сопоставить с реальными ID на этапе 0.
+
+version: 1
+repos:
+
+  - repo: fastapi/fastapi
+    platform: github
+    ref: TODO
+    verified: false
+    expected_type: library
+    checks:
+      tests_in_ci: pass
+      dockerfile_present: na
+      container_nonroot: na
+      dockerfile_multistage: na
+      base_image_pinned: na
+      dockerignore: na
+      healthcheck: na
+      compose_resource_limits: na
+      observability: na
+      changelog: pass          # docs/en/docs/release-notes.md
+    notes: Главный кейс с лендинга. Проверить наличие SECURITY.md и CONTRIBUTING.
+
+  - repo: django/django
+    platform: github
+    ref: TODO
+    verified: false
+    expected_type: library
+    checks:
+      tests_in_ci: pass
+      readme: pass             # README.rst
+      contributing: pass       # CONTRIBUTING.rst
+      changelog: pass          # docs/releases/
+      dockerfile_present: na
+      observability: na
+    notes: Проверка расширения .rst и changelog в виде каталога docs/releases/.
+
+  - repo: expressjs/express
+    platform: github
+    ref: TODO
+    verified: false
+    expected_type: library
+    checks:
+      tests_in_ci: pass
+      changelog: pass          # History.md
+      lockfile_present: na     # npm-библиотеки часто не коммитят lock-файл
+      dockerfile_present: na
+      observability: na
+    notes: Альтернативное имя changelog.
+
+  - repo: sindresorhus/awesome
+    platform: github
+    ref: TODO
+    verified: false
+    expected_type: docs
+    checks:
+      tests_in_ci: na
+      dockerfile_present: na
+      dependency_manifest: na
+      lockfile_present: na
+      observability: na
+      changelog: na
+      license: pass
+    notes: Контрольный репозиторий без кода — почти всё должно быть na, без падения.
+
+  - repo: terraform-aws-modules/terraform-aws-vpc
+    platform: github
+    ref: TODO
+    verified: false
+    expected_type: iac
+    checks:
+      dockerfile_present: na
+      observability: na
+      lockfile_present: na     # модули обычно не коммитят .terraform.lock.hcl
+      changelog: pass
+    notes: Terraform-модуль.
+
+  - repo: prometheus-community/helm-charts
+    platform: github
+    ref: TODO
+    verified: false
+    expected_type: iac
+    checks:
+      tests_in_ci: pass        # chart-testing (lint/install) в workflow
+      dockerfile_present: na
+      observability: na
+    notes: Helm-чарты; монорепо чартов.
+
+  - repo: grafana/grafana
+    platform: github
+    ref: TODO
+    verified: false
+    expected_type: service
+    checks:
+      dockerfile_present: pass
+      container_nonroot: pass
+      tests_in_ci: pass
+      observability: pass
+    notes: Контрольный сервис с хорошей практикой; большой репозиторий — проверить время скана.
+
+  - repo: gitlab-org/gitlab-runner
+    platform: gitlab
+    ref: TODO
+    verified: false
+    expected_type: service
+    checks:
+      tests_in_ci: pass        # тесты в файлах, подключённых через include:
+    notes: Проверка разбора include: в .gitlab-ci.yml.
+
+  # TODO: добавить 10–15 небольших реальных репозиториев с настоящими проблемами
+  # (из истории сканирований), чтобы набор ловил ложные PASS, а не только ложные FAIL.

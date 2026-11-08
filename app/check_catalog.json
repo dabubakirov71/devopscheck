@@ -1,0 +1,402 @@
+{
+ "actions.broad_permissions": {
+  "check_id": "actions.broad_permissions",
+  "name": "Workflow permissions are least-privilege",
+  "category": "security",
+  "severity": "warn",
+  "description": "Every workflow declares the permissions its token gets.",
+  "recommendation": "Declare the minimum at the top of each workflow, and widen it only on the job that needs more:\npermissions:\n  contents: read\n  pull-requests: write  # only where it is actually used"
+ },
+ "actions.cloud_oidc": {
+  "check_id": "actions.cloud_oidc",
+  "name": "Cloud deploys use short-lived credentials (OIDC)",
+  "category": "security",
+  "severity": "warn",
+  "description": "Cloud access from workflows uses OpenID Connect instead of a stored key.",
+  "recommendation": ""
+ },
+ "actions.pinned_sha": {
+  "check_id": "actions.pinned_sha",
+  "name": "GitHub Actions pinned to a commit SHA",
+  "category": "security",
+  "severity": "warn",
+  "description": "Every third-party action is pinned to a commit SHA.",
+  "recommendation": "Reference actions by full commit SHA:\n  uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2\nTools such as pin-github-action or Dependabot can do this and keep it updated."
+ },
+ "actions.pull_request_target": {
+  "check_id": "actions.pull_request_target",
+  "name": "No unsafe pull_request_target workflow",
+  "category": "security",
+  "severity": "crit",
+  "description": "No pull_request_target or workflow_run workflow checks out pull request code.",
+  "recommendation": ""
+ },
+ "actions.script_injection": {
+  "check_id": "actions.script_injection",
+  "name": "No script injection in workflows",
+  "category": "security",
+  "severity": "crit",
+  "description": "No workflow pastes an issue, pull request, comment or branch name into a script.",
+  "recommendation": ""
+ },
+ "actions.self_hosted_public": {
+  "check_id": "actions.self_hosted_public",
+  "name": "No self-hosted runners in a public repository",
+  "category": "security",
+  "severity": "crit",
+  "description": "No self-hosted runner can be started by someone outside the repository.",
+  "recommendation": ""
+ },
+ "ai.agent_ci_exposed": {
+  "check_id": "ai.agent_ci_exposed",
+  "name": "AI agents in CI cannot be steered by outsiders",
+  "category": "ai_agents",
+  "severity": "crit",
+  "description": "Every AI agent in CI either runs on events only collaborators can cause, checks who triggered it, or cannot write.",
+  "recommendation": ""
+ },
+ "ai.instructions_clean": {
+  "check_id": "ai.instructions_clean",
+  "name": "Agent instruction files hold no secrets or internal addresses",
+  "category": "ai_agents",
+  "severity": "warn",
+  "description": "CLAUDE.md, AGENTS.md and similar files contain no credentials or internal hostnames.",
+  "recommendation": ""
+ },
+ "ai.mcp_pinned": {
+  "check_id": "ai.mcp_pinned",
+  "name": "MCP servers run a pinned version",
+  "category": "ai_agents",
+  "severity": "warn",
+  "description": "Every locally started MCP server names an exact version.",
+  "recommendation": ""
+ },
+ "ai.mcp_secrets": {
+  "check_id": "ai.mcp_secrets",
+  "name": "No credentials in MCP server configs",
+  "category": "ai_agents",
+  "severity": "crit",
+  "description": "MCP configs reference credentials from the environment instead of containing them.",
+  "recommendation": ""
+ },
+ "ci.branch_protection": {
+  "check_id": "ci.branch_protection",
+  "name": "Default branch is protected",
+  "category": "ci_cd",
+  "severity": "warn",
+  "description": "Branch protection stops anyone pushing straight to main without review.",
+  "recommendation": ""
+ },
+ "ci.linter": {
+  "check_id": "ci.linter",
+  "name": "Linter or formatter configured",
+  "category": "ci_cd",
+  "severity": "info",
+  "description": "A single enforced code style removes a whole class of review comments.",
+  "recommendation": "Add a linter config: ruff.toml or pyproject.toml for Python, eslint.config.js for JavaScript, .golangci.yml for Go."
+ },
+ "ci.pipeline": {
+  "check_id": "ci.pipeline",
+  "name": "CI/CD pipeline configured",
+  "category": "ci_cd",
+  "severity": "warn",
+  "description": "Detected: GitLab CI.",
+  "recommendation": "Add .github/workflows/ci.yml (or .gitlab-ci.yml) that runs your tests and linter on every push."
+ },
+ "ci.security_scan": {
+  "check_id": "ci.security_scan",
+  "name": "Security scanning in the pipeline",
+  "category": "ci_cd",
+  "severity": "warn",
+  "description": "A scanner in CI catches vulnerable dependencies and leaked secrets before they merge.",
+  "recommendation": "Add a scanning step to CI. Free options: Trivy for images and dependencies, gitleaks for secrets, CodeQL for code. Each is a single job in your existing workflow."
+ },
+ "ci.tests": {
+  "check_id": "ci.tests",
+  "name": "Tests run in CI",
+  "category": "ci_cd",
+  "severity": "warn",
+  "description": "Running the test suite on every commit is what stops a regression from reaching production.",
+  "recommendation": "Add a test step to the pipeline (pytest, jest, go test — whatever your stack uses)."
+ },
+ "deps.cve": {
+  "check_id": "deps.cve",
+  "name": "Known vulnerabilities in dependencies",
+  "category": "deps",
+  "severity": "info",
+  "description": "Checked 2 dependencies against OSV.dev — no known vulnerabilities.",
+  "recommendation": ""
+ },
+ "deps.lockfile": {
+  "check_id": "deps.lockfile",
+  "name": "Lock file present",
+  "category": "deps",
+  "severity": "warn",
+  "description": "A lock file pins exact versions so the build you tested is the build you ship.",
+  "recommendation": "Generate a lock file: `pip freeze > requirements.lock`, `npm install`, `poetry lock`, `go mod tidy` or `cargo build` depending on your stack."
+ },
+ "deps.manifest": {
+  "check_id": "deps.manifest",
+  "name": "Dependency manifest present",
+  "category": "deps",
+  "severity": "crit",
+  "description": "Without a manifest the environment cannot be reproduced or scanned for vulnerabilities.",
+  "recommendation": "Add a dependency file: requirements.txt or pyproject.toml (Python), package.json (Node), go.mod (Go), Cargo.toml (Rust)."
+ },
+ "deps.pinned": {
+  "check_id": "deps.pinned",
+  "name": "Dependencies pinned to exact versions",
+  "category": "deps",
+  "severity": "warn",
+  "description": "Ranges such as >= mean two builds of the same commit can install different code.",
+  "recommendation": ""
+ },
+ "docker.dockerfile": {
+  "check_id": "docker.dockerfile",
+  "name": "Dockerfile present",
+  "category": "docker",
+  "severity": "warn",
+  "description": "A Dockerfile gives everyone — and production — the same reproducible runtime.",
+  "recommendation": "Add a Dockerfile at the repository root. Use a multi-stage build to keep the final image small."
+ },
+ "docker.dockerignore": {
+  "check_id": "docker.dockerignore",
+  "name": ".dockerignore configured",
+  "category": "docker",
+  "severity": "info",
+  "description": ".dockerignore keeps .git, node_modules and secrets out of the build context.",
+  "recommendation": "Create .dockerignore with at least: .git, node_modules, __pycache__, .env, *.log"
+ },
+ "docker.healthcheck": {
+  "check_id": "docker.healthcheck",
+  "name": "Healthcheck defined",
+  "category": "docker",
+  "severity": "warn",
+  "description": "Without a healthcheck the orchestrator cannot tell a starting container from a broken one.",
+  "recommendation": "Add to docker-compose.yml:\nhealthcheck:\n  test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:8000/health/\"]\n  interval: 30s\n  timeout: 10s\n  retries: 3"
+ },
+ "docker.multistage": {
+  "check_id": "docker.multistage",
+  "name": "Dockerfile uses a multi-stage build",
+  "category": "docker",
+  "severity": "warn",
+  "description": "A multi-stage build leaves compilers and build tools out of the shipped image.",
+  "recommendation": "Split the build:\nFROM python:3.11 AS builder\nRUN pip install --prefix=/install -r requirements.txt\nFROM python:3.11-slim\nCOPY --from=builder /install /usr/local"
+ },
+ "docker.nonroot": {
+  "check_id": "docker.nonroot",
+  "name": "Container runs as a non-root user",
+  "category": "docker",
+  "severity": "warn",
+  "description": "A container running as root turns a process escape into host access.",
+  "recommendation": "Add to the Dockerfile:\nRUN addgroup -S app && adduser -S app -G app\nUSER app"
+ },
+ "docker.pinned_base": {
+  "check_id": "docker.pinned_base",
+  "name": "Base image is pinned (not :latest)",
+  "category": "docker",
+  "severity": "warn",
+  "description": "Base images are pinned to explicit tags.",
+  "recommendation": "Replace floating tags with explicit ones, for example FROM python:3.11-slim or FROM node:20-alpine. Pin by digest for the strongest guarantee."
+ },
+ "docker.resource_limits": {
+  "check_id": "docker.resource_limits",
+  "name": "Resource limits set in compose",
+  "category": "docker",
+  "severity": "warn",
+  "description": "Without memory limits one runaway container can take the whole host down with it.",
+  "recommendation": "Add to each service:\ndeploy:\n  resources:\n    limits:\n      memory: 512M\n      cpus: \"0.5\""
+ },
+ "docs.changelog": {
+  "check_id": "docs.changelog",
+  "name": "CHANGELOG maintained",
+  "category": "hygiene",
+  "severity": "info",
+  "description": "A changelog tells users and your own team what actually changed between releases.",
+  "recommendation": "Add CHANGELOG.md and follow the keepachangelog.com format."
+ },
+ "docs.contributing": {
+  "check_id": "docs.contributing",
+  "name": "CONTRIBUTING guide",
+  "category": "hygiene",
+  "severity": "info",
+  "description": "A contribution guide lowers the barrier for the next person who wants to help.",
+  "recommendation": "Add CONTRIBUTING.md describing the flow: fork, branch, pull request, review."
+ },
+ "docs.readme": {
+  "check_id": "docs.readme",
+  "name": "README exists",
+  "category": "hygiene",
+  "severity": "info",
+  "description": "The README is the first thing anyone opening the repository reads.",
+  "recommendation": "Add README.md covering what the project does, how to run it locally, and how to run the tests."
+ },
+ "docs.readme_quality": {
+  "check_id": "docs.readme_quality",
+  "name": "README explains how to run the project",
+  "category": "hygiene",
+  "severity": "info",
+  "description": "A README without setup instructions costs every new developer their first day.",
+  "recommendation": "Expand the README with a Getting started section: prerequisites, install command, how to run the app, how to run the tests."
+ },
+ "docs.templates": {
+  "check_id": "docs.templates",
+  "name": "Pull request / issue templates",
+  "category": "hygiene",
+  "severity": "info",
+  "description": "Templates make sure every PR and bug report arrives with the context reviewers need.",
+  "recommendation": "Add .github/pull_request_template.md and .github/ISSUE_TEMPLATE/bug_report.md."
+ },
+ "gitlab_ci.cloud_oidc": {
+  "check_id": "gitlab_ci.cloud_oidc",
+  "name": "Cloud deploys use short-lived credentials (OIDC)",
+  "category": "security",
+  "severity": "warn",
+  "description": "Cloud access from the pipeline uses OpenID Connect instead of a stored key.",
+  "recommendation": ""
+ },
+ "gitlab_ci.pinned_images": {
+  "check_id": "gitlab_ci.pinned_images",
+  "name": "GitLab CI images are pinned",
+  "category": "security",
+  "severity": "warn",
+  "description": "Every job image and service names a tag or a digest.",
+  "recommendation": "Name an exact version, or better a digest:\n  image: python:3.12.7-slim\n  image: python@sha256:<digest>   # cannot be repointed\nRenovate can keep either up to date."
+ },
+ "gitlab_ci.pinned_includes": {
+  "check_id": "gitlab_ci.pinned_includes",
+  "name": "GitLab CI includes are pinned",
+  "category": "security",
+  "severity": "warn",
+  "description": "Every included pipeline file is local, a GitLab template, or pinned to a version.",
+  "recommendation": ""
+ },
+ "iac.no_hardcoded_credentials": {
+  "check_id": "iac.no_hardcoded_credentials",
+  "name": "No provider credentials hardcoded in Terraform",
+  "category": "iac",
+  "severity": "crit",
+  "description": "Credentials come from variables or the environment.",
+  "recommendation": ""
+ },
+ "iac.open_ingress": {
+  "check_id": "iac.open_ingress",
+  "name": "No sensitive ports open to the internet",
+  "category": "iac",
+  "severity": "crit",
+  "description": "No sensitive port is reachable from 0.0.0.0/0.",
+  "recommendation": ""
+ },
+ "iac.pinned_providers": {
+  "check_id": "iac.pinned_providers",
+  "name": "Provider versions are constrained",
+  "category": "iac",
+  "severity": "warn",
+  "description": "Provider versions are constrained.",
+  "recommendation": ""
+ },
+ "iac.remote_state": {
+  "check_id": "iac.remote_state",
+  "name": "Terraform state is remote and locked",
+  "category": "iac",
+  "severity": "crit",
+  "description": "Local state means no team can apply safely — two people applying at once corrupt it, and the file usually holds secrets in plain text.",
+  "recommendation": "Configure a remote backend with locking:\nterraform {\n  backend \"s3\" {\n    bucket         = \"my-tf-state\"\n    key            = \"prod/terraform.tfstate\"\n    region         = \"eu-central-1\"\n    dynamodb_table = \"tf-state-lock\"\n    encrypt        = true\n  }\n}"
+ },
+ "iac.scanning": {
+  "check_id": "iac.scanning",
+  "name": "Terraform is scanned in CI",
+  "category": "iac",
+  "severity": "warn",
+  "description": "An IaC scanner catches a misconfigured resource in review, not after it is live.",
+  "recommendation": "Add Checkov or tfsec to the pipeline:\n- run: pip install checkov && checkov -d . --quiet --compact"
+ },
+ "ops.activity": {
+  "check_id": "ops.activity",
+  "name": "Repository is actively maintained",
+  "category": "hygiene",
+  "severity": "info",
+  "description": "Last commit is recent.",
+  "recommendation": "Either bring the project up to date or archive it so nobody depends on it by mistake."
+ },
+ "ops.env_example": {
+  "check_id": "ops.env_example",
+  "name": ".env.example documents required variables",
+  "category": "hygiene",
+  "severity": "info",
+  "description": "When .env is ignored and undocumented, nobody new can start the project.",
+  "recommendation": "Add .env.example listing every variable the app reads, with placeholder values."
+ },
+ "ops.gitignore": {
+  "check_id": "ops.gitignore",
+  "name": ".gitignore configured",
+  "category": "hygiene",
+  "severity": "info",
+  "description": "Without .gitignore, build output and local secrets end up committed sooner or later.",
+  "recommendation": "Add a .gitignore for your stack — gitignore.io generates one from a language list."
+ },
+ "ops.license": {
+  "check_id": "ops.license",
+  "name": "License specified",
+  "category": "hygiene",
+  "severity": "info",
+  "description": "Without a license, nobody else has legal permission to use the code.",
+  "recommendation": "Add a LICENSE file — MIT or Apache 2.0 for open source, or a proprietary notice for closed code."
+ },
+ "ops.observability": {
+  "check_id": "ops.observability",
+  "name": "Observability tooling is wired in",
+  "category": "ops",
+  "severity": "info",
+  "description": "Found: Loguru.",
+  "recommendation": "Add the three signals:\n• Errors:  sentry-sdk\n• Metrics: prometheus-client plus a /metrics endpoint\n• Traces:  opentelemetry-sdk\n• Logs:    structlog or loguru for structured JSON output"
+ },
+ "security.codeowners": {
+  "check_id": "security.codeowners",
+  "name": "CODEOWNERS is configured",
+  "category": "hygiene",
+  "severity": "info",
+  "description": "CODEOWNERS automatically requests review from the right people on security-critical paths.",
+  "recommendation": "Create .github/CODEOWNERS:\n* @team-lead\n/config/ @security-team"
+ },
+ "security.dependency_updates": {
+  "check_id": "security.dependency_updates",
+  "name": "Automated dependency updates",
+  "category": "security",
+  "severity": "warn",
+  "description": "Dependabot or Renovate opens pull requests as soon as a security patch is released.",
+  "recommendation": "Add .github/dependabot.yml so security patches arrive as pull requests instead of waiting for someone to notice them."
+ },
+ "security.env_gitignored": {
+  "check_id": "security.env_gitignored",
+  "name": ".env is ignored by git",
+  "category": "security",
+  "severity": "crit",
+  "description": "This project does not use a .env file.",
+  "recommendation": "Add a `.env` line to .gitignore, then confirm the file is not already tracked with `git ls-files .env`. If it is, remove it from history and rotate every value in it."
+ },
+ "security.env_not_committed": {
+  "check_id": "security.env_not_committed",
+  "name": ".env file is not committed",
+  "category": "security",
+  "severity": "crit",
+  "description": "No .env file is tracked in the repository.",
+  "recommendation": "Delete the file from the repository (`git rm --cached .env`), rotate every value it contained, and add `.env` to .gitignore."
+ },
+ "security.no_secrets": {
+  "check_id": "security.no_secrets",
+  "name": "No secrets committed to the repository",
+  "category": "security",
+  "severity": "crit",
+  "description": "No credentials found in the repository source.",
+  "recommendation": "Treat every value found as compromised and rotate it now — removing the line is not enough, it stays in git history.\n1. Rotate the credential at the provider.\n2. Move it to an environment variable or a secret manager.\n3. Purge it from history with git-filter-repo or BFG.\n4. Add a pre-commit hook (gitleaks or detect-secrets) so the next one never lands."
+ },
+ "security.security_policy": {
+  "check_id": "security.security_policy",
+  "name": "Security policy (SECURITY.md)",
+  "category": "hygiene",
+  "severity": "info",
+  "description": "Tells researchers how to report a vulnerability privately instead of opening a public issue.",
+  "recommendation": "Add SECURITY.md with a contact address and your expected response time."
+ }
+}

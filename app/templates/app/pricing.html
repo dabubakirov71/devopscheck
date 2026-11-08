@@ -1,0 +1,234 @@
+{% extends "app/base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Pricing" %} — DevOpsCheck{% endblock %}
+{% block meta_description %}{% trans "DevOpsCheck pricing. Free for public repositories and no account needed. Paid plans from $19 a month for private repositories, AI analysis, pull request comments and SOC 2 evidence." %}{% endblock %}
+{% block og_title %}{% trans "DevOpsCheck — pricing" %}{% endblock %}
+{% block og_description %}{% trans "Free for public repositories. Paid plans from $19 a month, billed per organisation rather than per engineer." %}{% endblock %}
+
+{% block extra_style %}
+.pr-wrap { max-width: 1120px; margin: 0 auto; padding: 56px 24px 80px; }
+.pr-head { text-align: center; max-width: 640px; margin: 0 auto 36px; }
+.pr-eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+.pr-head h1 { font-size: clamp(28px, 4.5vw, 42px); font-weight: 800; letter-spacing: -.03em; line-height: 1.1; color: #f0f8ff; margin-bottom: 14px; }
+.pr-head p { color: var(--muted); font-size: 15.5px; line-height: 1.7; }
+
+.period-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
+.period-tab {
+  font-family: var(--mono); font-size: 12px; letter-spacing: .05em; padding: 9px 20px;
+  border: 1px solid var(--border2); border-radius: 5px; color: var(--muted);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.period-tab:hover { color: var(--text); }
+.period-tab.on { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 700; }
+.save-chip { font-size: 11.5px; padding: 1px 6px; border-radius: 3px; background: rgba(0,0,0,.18); letter-spacing: .06em; }
+.period-tab:not(.on) .save-chip { background: rgba(0,255,136,.12); color: var(--accent); }
+
+.pr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.pr-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 24px 22px; display: flex; flex-direction: column;
+}
+.pr-card.featured { border-color: var(--accent); background: linear-gradient(160deg, rgba(0,255,136,.05), var(--surface) 60%); }
+.pr-tag {
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .13em; text-transform: uppercase;
+  color: var(--muted); border: 1px solid var(--border2); border-radius: 3px;
+  padding: 3px 8px; align-self: flex-start; margin-bottom: 14px;
+}
+.pr-card.featured .pr-tag { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 700; }
+.pr-name { font-size: 19px; font-weight: 700; color: #f0f8ff; letter-spacing: -.02em; margin-bottom: 8px; }
+.pr-price { font-family: var(--mono); font-size: 34px; font-weight: 700; color: #f0f8ff; letter-spacing: -.03em; line-height: 1; }
+.pr-price sup { font-size: 17px; vertical-align: super; color: var(--muted); font-weight: 500; }
+.pr-price .per { font-size: 13px; color: var(--muted); font-weight: 400; letter-spacing: 0; }
+.pr-billed { font-family: var(--mono); font-size: 11px; color: var(--accent); margin-top: 7px; min-height: 16px; }
+.pr-desc { color: var(--muted); font-size: 13.5px; line-height: 1.6; margin: 12px 0 0; }
+.pr-sep { border: 0; border-top: 1px solid var(--border); margin: 18px 0; }
+.pr-feat { font-size: 13.5px; color: var(--text); padding: 5px 0 5px 22px; position: relative; line-height: 1.5; }
+.pr-feat::before { content: '✓'; position: absolute; left: 0; color: var(--accent); font-size: 12px; }
+.pr-feat.no { color: var(--dim); }
+.pr-feat.no::before { content: '✕'; color: var(--dim); }
+.pr-cta {
+  margin-top: auto; padding-top: 20px; display: block; text-align: center;
+  font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .05em;
+}
+.pr-btn {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 45px; padding: 12px 14px; border-radius: 5px;
+  font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .05em;
+  border: 1px solid var(--border2); color: var(--text); transition: all .15s;
+}
+.pr-btn:hover { border-color: var(--muted); background: var(--surface2); }
+.pr-btn.solid { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.pr-btn.solid:hover { background: var(--accent2); border-color: var(--accent2); }
+
+.pr-note { text-align: center; color: var(--muted); font-size: 13px; margin-top: 26px; line-height: 1.7; }
+.pr-note strong { color: var(--text); }
+
+.cmp { margin-top: 60px; }
+.cmp h2 { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 600; border-top: 1px solid var(--border); padding-top: 14px; margin-bottom: 18px; }
+.cmp-tbl { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 620px; }
+th { font-family: var(--mono); font-size: 11.5px; letter-spacing: .11em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 12px 14px; border-bottom: 1px solid var(--border); text-align: center; background: var(--surface2); }
+th:first-child { text-align: left; }
+td { padding: 11px 14px; border-bottom: 1px solid var(--border); text-align: center; color: var(--muted); }
+td:first-child { text-align: left; color: var(--text); }
+tr:last-child td { border-bottom: 0; }
+.yes { color: var(--accent); font-weight: 600; }
+.no { color: var(--dim); }
+
+.faq { margin-top: 56px; max-width: 720px; margin-left: auto; margin-right: auto; }
+.faq h2 { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 600; border-top: 1px solid var(--border); padding-top: 14px; margin-bottom: 18px; }
+.faq-item { border: 1px solid var(--border); border-radius: 7px; background: var(--surface); padding: 16px 18px; margin-bottom: 8px; }
+.faq-item h3 { font-size: 14.5px; color: #e8f4ff; margin-bottom: 7px; font-weight: 600; }
+.faq-item p { color: var(--muted); font-size: 13.5px; line-height: 1.65; }
+
+@media (max-width: 640px) {
+  .pr-wrap { padding: 36px 18px 60px; }
+  .pr-grid { grid-template-columns: 1fr; }
+}
+
+/* Touch targets on a fingertip pointer. Accordion headers and tabs are real
+   controls and get the full 44px; a link inside a sentence is left alone,
+   because padding it out breaks the line it belongs to. */
+@media (pointer: coarse), (max-width: 700px) {
+  .pr-q { min-height: 44px; }
+  .period-tab, .pr-toggle a { min-height: 44px; display: inline-flex; align-items: center; }
+}
+{% endblock %}
+
+{% block content %}
+<div class="pr-wrap">
+  <div class="pr-head">
+    <div class="pr-eyebrow">{% trans "pricing" %}</div>
+    <h1>{% trans "Start free, pay when it pays for itself" %}</h1>
+    <p>{% trans "Public repositories are free to scan and need no account at all. Paid plans are for private repositories, and Team is priced per organisation — seats are included, so adding an engineer never costs more." %}</p>
+  </div>
+
+  <div class="period-row">
+    <a href="?period=monthly" class="period-tab {% if period == 'monthly' %}on{% endif %}">{% trans "Monthly" %}</a>
+    <a href="?period=annual" class="period-tab {% if period == 'annual' %}on{% endif %}">
+      {% trans "Annual" %} <span class="save-chip">−{{ annual_discount }}%</span>
+    </a>
+  </div>
+
+  <div class="pr-grid">
+    <div class="pr-card">
+      <div class="pr-tag">FREE</div>
+      <div class="pr-name">{% trans "Free" %}</div>
+      <div class="pr-price"><sup>$</sup>0 <span class="per">/ {% trans "forever" %}</span></div>
+      <div class="pr-billed">&nbsp;</div>
+      <p class="pr-desc">{% trans "Personal projects and a real look at the product" %}</p>
+      <hr class="pr-sep">
+      <div class="pr-feat">{% trans "Unlimited public repository scans" %}</div>
+      <div class="pr-feat">{% blocktrans with n=free_limit %}{{ n }} private repositories{% endblocktrans %}</div>
+      <div class="pr-feat">{% blocktrans with a=free_ai p=free_pdf %}{{ a }} AI report and {{ p }} PDF per month{% endblocktrans %}</div>
+      <div class="pr-feat">{% trans "Score badge for your README" %}</div>
+      <div class="pr-feat no">{% trans "Score history and trend" %}</div>
+      <div class="pr-cta"><a href="/scan/" class="pr-btn">{% trans "Scan a repository" %}</a></div>
+    </div>
+
+    {% for plan in plans %}
+    <div class="pr-card {% if plan.key == 'pro' %}featured{% endif %}">
+      <div class="pr-tag">{% if plan.key == 'pro' %}{% trans "MOST POPULAR" %}{% else %}{{ plan.key|upper }}{% endif %}</div>
+      <div class="pr-name">{{ plan.key|capfirst }}</div>
+      {% if period == 'annual' %}
+        <div class="pr-price"><sup>$</sup>{{ plan.annual_per_month }} <span class="per">/ {% trans "month" %}</span></div>
+        <div class="pr-billed">{% blocktrans with total=plan.annual saving=plan.saving %}${{ total }} yearly · save ${{ saving }}{% endblocktrans %}</div>
+      {% else %}
+        <div class="pr-price"><sup>$</sup>{{ plan.monthly }} <span class="per">/ {% trans "month" %}</span></div>
+        <div class="pr-billed">&nbsp;</div>
+      {% endif %}
+      <p class="pr-desc">
+        {% if plan.key == 'pro' %}{% trans "One engineer, every repository they own" %}
+        {% elif plan.key == 'team' %}{% trans "One organisation, seats included" %}
+        {% else %}{% trans "For the audit you already have a date for" %}{% endif %}
+      </p>
+      <hr class="pr-sep">
+      {% if plan.key == 'pro' %}
+        <div class="pr-feat">{% trans "Unlimited private repositories" %}</div>
+        <div class="pr-feat">{% trans "AI analysis on every issue" %}</div>
+        <div class="pr-feat">{% trans "Score history and trend" %}</div>
+        <div class="pr-feat">{% trans "One-click fix as a pull request" %}</div>
+        <div class="pr-feat">{% trans "Re-audit on every push" %}</div>
+        <div class="pr-feat">{% trans "PDF reports" %}</div>
+        <div class="pr-feat">{% trans "Score comment on every pull request" %}</div>
+      {% elif plan.key == 'team' %}
+        <div class="pr-feat">{% trans "Everything in Pro" %}</div>
+        <div class="pr-feat">{% trans "Organisation dashboard" %}</div>
+        <div class="pr-feat">{% trans "Weekly trend across all repositories" %}</div>
+        <div class="pr-feat">{% trans "GitLab self-hosted" %}</div>
+        <div class="pr-feat">{% trans "Seats included — priced per organisation" %}</div>
+      {% else %}
+        <div class="pr-feat">{% trans "Everything in Team" %}</div>
+        <div class="pr-feat">{% trans "SOC 2 and ISO 27001 control mapping" %}</div>
+        <div class="pr-feat">{% trans "Evidence export for auditors" %}</div>
+        <div class="pr-feat">{% trans "SBOM export (CycloneDX, SPDX)" %}</div>
+        <div class="pr-feat">{% trans "Full audit history retention" %}</div>
+      {% endif %}
+      <div class="pr-cta">
+        <a href="{% url 'register' %}?next=/billing/?period={{ period }}"
+           class="pr-btn {% if plan.key == 'pro' %}solid{% endif %}">
+          {% blocktrans with name=plan.key|capfirst %}Choose {{ name }}{% endblocktrans %} →
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <p class="pr-note">
+    {% if crypto_enabled %}{% trans "Card payments through Lemon Squeezy, or crypto through Cryptomus." %}{% else %}{% trans "Card payments through Lemon Squeezy." %}{% endif %}<br>
+    <strong>{% trans "No credit card needed to start" %}</strong> — {% trans "the free plan and the public scanner work immediately." %}
+  </p>
+
+  <div class="cmp">
+    <h2>{% trans "What each plan includes" %}</h2>
+    <div class="cmp-tbl">
+      <table>
+        <thead>
+          <tr>
+            <th>{% trans "Capability" %}</th>
+            <th>Free</th><th>Pro</th><th>Team</th><th>Compliance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>{% trans "Public repository scans" %}</td><td class="yes">∞</td><td class="yes">∞</td><td class="yes">∞</td><td class="yes">∞</td></tr>
+          <tr><td>{% trans "Private repositories" %}</td><td>{{ free_limit }}</td><td class="yes">∞</td><td class="yes">∞</td><td class="yes">∞</td></tr>
+          <tr><td>{% trans "AI analysis of each issue" %}</td><td>{{ free_ai }}/{% trans "month" %}</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>{% trans "Score history and trend" %}</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>{% trans "Fix opened as a pull request" %}</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>{% trans "Re-audit on every push" %}</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>{% trans "PDF report" %}</td><td>{{ free_pdf }}/{% trans "month" %}</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>{% trans "Organisation dashboard" %}</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>{% trans "Score comment on pull requests" %}</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>{% trans "SOC 2 / ISO 27001 mapping" %}</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+          <tr><td>{% trans "Evidence and SBOM export" %}</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="faq">
+    <h2>{% trans "Questions people ask before paying" %}</h2>
+    <div class="faq-item">
+      <h3>{% trans "Do I need an account to try it?" %}</h3>
+      <p>{% trans "No. Any public repository can be scanned at /scan/ with no sign-up — you get the full result, the score and every finding. An account is only needed for private repositories." %}</p>
+    </div>
+    <div class="faq-item">
+      <h3>{% trans "What access does it need to my code?" %}</h3>
+      <p>{% trans "Read access only. Repository code is never stored — only the check results. Access tokens are encrypted at rest with a key held outside the database, and you can revoke a token at any time in your GitHub or GitLab settings." %}</p>
+    </div>
+    <div class="faq-item">
+      <h3>{% trans "Why is Team priced per organisation?" %}</h3>
+      <p>{% trans "Because per-seat pricing punishes you for adding the engineer who most needs to see the report. One price covers the whole organisation, however many people look at it." %}</p>
+    </div>
+    <div class="faq-item">
+      <h3>{% trans "How do I cancel?" %}</h3>
+      <p>{% if crypto_enabled %}{% trans "Card subscriptions cancel from the billing page and stay active until the end of the paid period. Crypto payments are one-off — nothing is ever charged again, and access simply runs to the end of the period you paid for." %}{% else %}{% trans "Cancel from the billing page at any time. The subscription stays active until the end of the period you have already paid for, and nothing is charged after that." %}{% endif %}</p>
+    </div>
+    <div class="faq-item">
+      <h3>{% trans "Does it work with self-hosted GitLab?" %}</h3>
+      <p>{% trans "Yes, from the Team plan. A custom GitLab URL, an internal DNS resolver and optional SSL verification are supported for instances that are not reachable from the public internet." %}</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

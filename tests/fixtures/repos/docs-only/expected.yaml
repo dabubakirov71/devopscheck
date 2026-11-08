@@ -1,0 +1,9 @@
+expected_type: docs
+checks:
+  tests_in_ci: na
+  dockerfile_present: na
+  dependency_manifest: na
+  lockfile_present: na
+  observability: na
+  changelog: na
+  license: pass

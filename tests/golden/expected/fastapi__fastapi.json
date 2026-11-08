@@ -1,0 +1,38 @@
+{
+ "category_scores": {
+  "ci_cd": 54,
+  "deps": 100,
+  "security": 100
+ },
+ "checks": {
+  "actions.broad_permissions": true,
+  "actions.cloud_oidc": true,
+  "actions.pinned_sha": true,
+  "actions.pull_request_target": true,
+  "actions.script_injection": true,
+  "actions.self_hosted_public": true,
+  "ci.branch_protection": false,
+  "ci.linter": true,
+  "ci.pipeline": true,
+  "ci.security_scan": false,
+  "ci.tests": true,
+  "deps.manifest": true,
+  "docs.changelog": true,
+  "docs.contributing": false,
+  "docs.readme": true,
+  "docs.readme_quality": true,
+  "docs.templates": true,
+  "ops.activity": false,
+  "ops.gitignore": true,
+  "ops.license": true,
+  "security.codeowners": false,
+  "security.dependency_updates": true,
+  "security.env_not_committed": true,
+  "security.no_secrets": true,
+  "security.security_policy": false
+ },
+ "confidence": 0.85,
+ "full_name": "fastapi/fastapi",
+ "kind": "library",
+ "score": 90
+}

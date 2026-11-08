@@ -1,0 +1,4 @@
+expected_type: service
+checks:
+  dockerfile_present: pass
+  container_nonroot: fail

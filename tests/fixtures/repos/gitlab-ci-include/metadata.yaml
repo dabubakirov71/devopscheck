@@ -1,0 +1,5 @@
+provider: gitlab
+default_branch: main
+pushed_at: "2026-09-01T12:00:00Z"
+private: false
+branch_protected: null

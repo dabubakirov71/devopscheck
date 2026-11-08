@@ -1,0 +1,1690 @@
+{% extends "app/base.html" %}
+{% load i18n app_extras %}
+{% block title %}{{ repo_display }} — {% trans "Audit" %}{% endblock %}
+
+{% block extra_style %}
+.chk-ev, .chk-fp { margin-top: 8px; font-size: 12px; color: var(--dim); }
+.chk-ev summary, .chk-fp summary { cursor: pointer; width: fit-content; }
+.chk-ev > div { font-family: var(--mono); margin-top: 6px; overflow-wrap: anywhere; }
+.chk-fp form { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.chk-fp textarea { flex: 1 1 240px; min-width: 0; background: transparent; color: inherit; border: 1px solid var(--border); border-radius: 5px; padding: 6px; font: inherit; }
+.chk-fp button { background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 5px; padding: 5px 12px; cursor: pointer; min-height: 36px; }
+.chk-ev summary:focus-visible, .chk-fp summary:focus-visible, .chk-fp button:focus-visible, .chk-fp textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hist-spark { width: 100%; height: 130px; display: block; margin-bottom: 4px; }
+.hist-range { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11.5px; color: var(--dim); margin-bottom: 14px; }
+.score-delta { font-family: var(--mono); font-size: 12px; font-weight: 600; margin-left: 8px; }
+
+/* ── Start here ─────────────────────────────────────────────────
+   A flat list of failures makes a leaked key look as urgent as a missing
+   CHANGELOG. This block answers "what first" and shows what it is worth. */
+.plan {
+  border: 1px solid var(--accent); border-radius: 10px;
+  background: linear-gradient(150deg, rgba(0,255,136,.06), var(--surface) 55%);
+  padding: 20px 22px; margin-bottom: 24px;
+}
+.plan-hdr {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 4px;
+}
+.plan-title { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+.plan-projection { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+.plan-projection b { color: var(--accent); font-size: 15px; }
+.plan-projection s { color: var(--dim); text-decoration: line-through; }
+.plan-sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; line-height: 1.6; }
+
+.plan-item {
+  display: grid; grid-template-columns: 26px 1fr auto; gap: 0 12px;
+  align-items: start; padding: 12px 0; border-top: 1px solid var(--border);
+}
+.plan-num { font-family: var(--mono); font-size: 12px; color: var(--dim); font-weight: 600; padding-top: 2px; }
+.plan-item > * { min-width: 0; }
+.plan-name { font-size: 14px; color: #e8f4ff; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.plan-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; font-family: var(--mono); font-size: 12px; }
+.plan-impact { color: var(--accent); }
+.plan-effort { color: var(--muted); }
+.plan-effort-instant { color: var(--accent); }
+.plan-sev { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; }
+.plan-sev-crit { background: rgba(255,68,102,.14); color: var(--red) }
+.plan-sev-warn { background: rgba(255,170,0,.12); color: var(--amber) }
+.plan-sev-info { background: rgba(68,136,255,.12); color: var(--blue) }
+.plan-go {
+  font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .05em;
+  padding: 7px 12px; border-radius: 4px; border: 1px solid var(--border2);
+  background: transparent; color: var(--muted); cursor: pointer; white-space: nowrap;
+}
+.plan-go:hover { color: var(--text); border-color: var(--muted); }
+.plan-go.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.plan-go.primary:hover { background: var(--accent2); border-color: var(--accent2); }
+.plan-rest { font-size: 12px; color: var(--muted); margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+@media (max-width: 560px) {
+  .plan { padding: 16px; }
+  .plan-item { grid-template-columns: 22px 1fr; }
+  .plan-go { grid-column: 2; justify-self: start; margin-top: 8px; }
+}
+.fail-box {
+  max-width: 560px; margin: 48px auto; text-align: center;
+  border: 1px solid rgba(255,68,102,.3); background: rgba(255,68,102,.05);
+  border-radius: 10px; padding: 36px 28px;
+}
+.fail-icon { font-size: 26px; color: var(--red); margin-bottom: 12px; }
+.fail-title { font-size: 19px; color: #f0f8ff; margin-bottom: 12px; font-weight: 600; }
+.fail-reason {
+  font-family: var(--mono); font-size: 12.5px; color: var(--red);
+  background: rgba(0,0,0,.25); border: 1px solid rgba(255,68,102,.2);
+  border-radius: 5px; padding: 10px 14px; margin-bottom: 14px;
+  word-break: break-word; text-align: left;
+}
+.fail-hint { color: var(--muted); font-size: 14px; line-height: 1.7; margin-bottom: 22px; }
+.fail-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.fix-pr-btn {
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .04em;
+  padding: 8px 14px; border-radius: 4px; border: none;
+  background: var(--accent); color: var(--bg); transition: background .15s;
+}
+.fix-pr-btn:hover:not(:disabled) { background: var(--accent2); }
+.fix-pr-btn:disabled { opacity: .55; cursor: default; }
+/* 11px for an error message is a developer reading their own console. This is
+   the sentence that decides whether the reader knows what to do next. */
+.fix-pr-result { font-size: 13px; line-height: 1.6; margin-top: 12px; overflow-wrap: anywhere; }
+.fix-pr-result:empty { margin-top: 0; }
+.fix-pr-result.ok a { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+.fix-pr-result.err {
+  color: var(--red); background: rgba(255,68,102,.07);
+  border: 1px solid rgba(255,68,102,.22); border-left-width: 3px;
+  border-radius: 0 5px 5px 0; padding: 11px 13px;
+}
+.fix-pr-result .fix-pr-note { color: var(--muted); }
+.fix-pr-result a.fix-pr-help { color: var(--accent); text-decoration: underline; margin-left: 4px; }
+/* The way out, wearing the same shape as the action it replaces. */
+.fix-pr-fix {
+  background: transparent !important; color: var(--amber) !important;
+  border: 1px solid rgba(255,170,0,.4); text-decoration: none;
+}
+.fix-pr-fix:hover { background: rgba(255,170,0,.1) !important; }
+.delta-up { color: #00cc6a } .delta-down { color: var(--red) } .delta-flat { color: var(--dim) }
+
+/* ── Back link ───────────────────────────────────────────────── */
+.back-link {
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  letter-spacing: .05em; color: var(--muted);
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-bottom: 24px; transition: color .15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Two-column layout ───────────────────────────────────────── */
+.audit-layout { display: grid; grid-template-columns: 196px 1fr; gap: 28px; align-items: start; }
+/* The repository's own gate, and anything wrong with the file that set it. A
+   config that silently does nothing is worse than no config at all. */
+.gate-bar {
+  max-width: 1040px; margin: 0 auto 14px; padding: 11px 16px;
+  border-radius: 6px; font-size: 13px; line-height: 1.55;
+  border: 1px solid var(--border2);
+}
+.gate-ok   { border-color: rgba(0,255,136,.3); background: rgba(0,255,136,.05); color: var(--accent); }
+.gate-fail { border-color: rgba(255,68,102,.32); background: rgba(255,68,102,.06); color: var(--red); }
+.cfg-errors {
+  max-width: 1040px; margin: 0 auto 18px; padding: 13px 16px;
+  border: 1px solid rgba(255,170,0,.3); background: rgba(255,170,0,.05);
+  border-radius: 6px;
+}
+.cfg-errors-title {
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--amber); margin-bottom: 8px;
+}
+.cfg-errors ul { margin: 0; padding-left: 18px; }
+.cfg-errors li { font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+@media(max-width:860px) {
+  .audit-layout { grid-template-columns: 1fr; }
+  /* nav.audit-sidebar, not .audit-sidebar: the desktop rule is declared later
+     in this sheet with the same specificity, so its `overflow: hidden` was
+     winning here and clipping the row — "Passed" was off the right edge with
+     no way to reach it on any phone. */
+  nav.audit-sidebar {
+    position: static; top: auto; align-self: auto;
+    display: flex; flex-direction: row; flex-wrap: nowrap;
+    overflow-x: auto; overflow-y: hidden;
+    padding: 0; border-radius: 6px; margin-bottom: 16px;
+    scrollbar-width: none;
+    /* The scrollbar is hidden, so the fade is the only thing saying there is
+       more to the right. It lifts once the row is scrolled to the end. */
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+  nav.audit-sidebar.scrolled-end {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .audit-sidebar::-webkit-scrollbar { display: none; }
+  .sidebar-title { display: none; }
+  .sidebar-sep { display: none; }
+  .sidebar-link {
+    display: inline-flex; flex-shrink: 0;
+    border-left: none; border-bottom: 2px solid transparent;
+    padding: 10px 16px; white-space: nowrap;
+  }
+  .sidebar-link.active { border-left-color: transparent; border-bottom-color: var(--accent); }
+  .sidebar-link .cnt { margin-left: 5px; }
+}
+
+/* ── Section nav sidebar ─────────────────────────────────────── */
+.audit-sidebar {
+  position: sticky; top: 76px; align-self: start;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 0; font-family: var(--mono); font-size: 11px;
+  overflow: hidden; width: 100%;
+}
+.sidebar-title {
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--dim); padding: 0 16px 10px;
+}
+.sidebar-link {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 16px; color: var(--muted); cursor: pointer;
+  transition: background .12s, color .12s; text-decoration: none;
+  border-left: 2px solid transparent;
+}
+.sidebar-link:hover { background: var(--surface2); color: var(--text); }
+.sidebar-link.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-dim); }
+.sidebar-link svg { width: 13px; height: 13px; flex-shrink: 0; opacity: .65; transition: opacity .12s; }
+.sidebar-link.active svg { opacity: 1; }
+.sidebar-link .cnt {
+  margin-left: auto; font-size: 11.5px; color: var(--dim);
+  background: var(--surface2); padding: 1px 6px; border-radius: 10px;
+}
+.sidebar-sep { border: none; border-top: 1px solid var(--border); margin: 6px 16px; }
+
+/* ── Audit header ────────────────────────────────────────────── */
+.audit-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-wrap: wrap; gap: 16px; margin-bottom: 20px;
+}
+.audit-repo-name {
+  font-family: var(--mono); font-size: 17px; font-weight: 600; color: #e8f4ff;
+  letter-spacing: -.01em; max-width: 480px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.audit-meta {
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  margin-top: 6px; letter-spacing: .02em; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.public-dot {
+  display: inline-flex; align-items: center; gap: 5px;
+  color: var(--accent); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase;
+}
+.public-dot::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  background: var(--accent); box-shadow: 0 0 0 0 rgba(0,255,136,.5);
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { box-shadow: 0 0 0 0 rgba(0,255,136,.5); }
+  50% { box-shadow: 0 0 0 6px rgba(0,255,136,0); }
+}
+
+/* ── Action buttons ──────────────────────────────────────────── */
+.audit-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; flex-wrap: wrap; align-self: flex-start; padding-top: 4px; }
+.btn-action {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px;
+  font-family: var(--mono); font-size: 11.5px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase;
+  padding: 0 13px; border: 1px solid var(--border2); border-radius: 4px;
+  color: var(--muted); background: var(--surface); cursor: pointer;
+  transition: all .15s; text-decoration: none; white-space: nowrap; flex-shrink: 0;
+}
+.btn-action:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.btn-action.is-active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.btn-action.pro-locked { border-color: rgba(255,170,0,.25); color: var(--amber); }
+.btn-action.pro-locked:hover { border-color: var(--amber); background: rgba(255,170,0,.05); }
+.btn-action svg { width: 12px; height: 12px; flex-shrink: 0; }
+.btn-label { }
+@media(max-width:560px) {
+  .btn-label { display: none; }
+  .btn-action { padding: 0; width: 32px; justify-content: center; }
+}
+
+/* ── Score ring ──────────────────────────────────────────────── */
+.score-ring {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 88px; height: 88px; border-radius: 50%; border: 2px solid; flex-shrink: 0;
+  animation: ring-in .45s cubic-bezier(.22,1,.36,1);
+}
+@keyframes ring-in { from { opacity: 0; transform: scale(.72); } to { opacity: 1; transform: scale(1); } }
+.score-ring .num { font-family: var(--mono); font-size: 26px; font-weight: 700; line-height: 1; letter-spacing: -.03em; }
+.score-ring .lbl { font-family: var(--mono); font-size: 11px; margin-top: 4px; letter-spacing: .08em; text-transform: uppercase; opacity: .75; }
+.sc-green { border-color: var(--accent); color: var(--accent); }
+.sc-blue  { border-color: var(--blue);   color: var(--blue); }
+.sc-amber { border-color: var(--amber);  color: var(--amber); }
+.sc-red   { border-color: var(--red);    color: var(--red); }
+.sc-gray  { border-color: var(--border); color: var(--muted); }
+
+/* ── Share card ──────────────────────────────────────────────── */
+.share-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 20px 22px; margin-bottom: 20px; display: none;
+}
+.share-card.open { display: block; }
+.share-card-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px; gap: 12px; flex-wrap: wrap;
+}
+.share-card-title {
+  font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--text);
+  display: flex; align-items: center; gap: 7px; letter-spacing: .03em;
+}
+.share-card-desc { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+
+/* Toggle switch */
+.toggle-wrap { display: flex; align-items: center; gap: 8px; }
+.toggle-lbl { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); transition: color .2s; }
+.toggle-lbl.active { color: var(--text); }
+.toggle-btn {
+  position: relative; width: 40px; height: 22px;
+  border: none; padding: 0; background: none; cursor: pointer; flex-shrink: 0;
+}
+.toggle-track {
+  position: absolute; inset: 0; border-radius: 22px;
+  background: var(--surface2); border: 1px solid var(--border2); transition: all .2s;
+}
+.toggle-btn.on .toggle-track { background: rgba(0,255,136,.16); border-color: rgba(0,255,136,.4); }
+.toggle-thumb {
+  position: absolute; top: 4px; left: 4px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--muted); transition: transform .2s, background .2s; pointer-events: none;
+}
+.toggle-btn.on .toggle-thumb { transform: translateX(18px); background: var(--accent); }
+
+/* Share URL row */
+.share-row-label {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 6px;
+}
+.share-url-row {
+  display: flex; align-items: stretch; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+}
+.share-url-text {
+  flex: 1; font-family: var(--mono); font-size: 11px; color: var(--text);
+  padding: 9px 12px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; min-width: 0; cursor: default;
+}
+.share-copy-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 0 14px; height: 36px; flex-shrink: 0;
+  background: var(--surface2); border: none; border-left: 1px solid var(--border);
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted); cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.share-copy-btn:hover { background: var(--border); color: var(--text); }
+.share-copy-btn.copied { color: var(--accent); }
+.share-copy-btn svg { width: 11px; height: 11px; }
+
+/* Badge section */
+.badge-section { margin-top: 18px; }
+.badge-preview-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.badge-preview-hint { font-family: var(--mono); font-size: 11.5px; color: var(--dim); }
+.code-block {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+}
+.code-block-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 12px; background: var(--surface2); border-bottom: 1px solid var(--border);
+}
+.code-block-lang { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.code-copy-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); background: none; border: none; cursor: pointer; transition: color .15s;
+}
+.code-copy-btn:hover, .code-copy-btn.copied { color: var(--accent); }
+.code-copy-btn svg { width: 11px; height: 11px; }
+.code-block-body {
+  padding: 12px 14px; font-family: var(--mono); font-size: 11px; line-height: 1.6;
+  white-space: pre-wrap; word-break: break-all; user-select: all;
+}
+.syn-bracket { color: #4a6070; }
+.syn-alt { color: #a0d8a0; }
+.syn-imgurl { color: #7ec8e3; }
+.syn-link { color: var(--accent); }
+.share-empty-hint { font-size: 12px; color: var(--dim); font-family: var(--mono); padding: 6px 0; }
+
+/* ── AI block ────────────────────────────────────────────────── */
+.ai-block {
+  background: linear-gradient(135deg, rgba(0,255,136,.04) 0%, rgba(68,136,255,.03) 100%);
+  border: 1px solid rgba(0,255,136,.14); border-radius: 10px;
+  padding: 20px 24px; margin-bottom: 24px; display: flex; gap: 16px; align-items: flex-start;
+}
+.ai-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+.ai-label { font-family: var(--mono); font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.incident { border: 1px solid var(--border2); border-radius: 6px; padding: 14px 16px; margin-bottom: 12px; }
+.incident-open { border-color: rgba(255,68,102,.45); background: rgba(255,68,102,.04); }
+.incident-rotated { opacity: .75; }
+.incident-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.incident-badge { font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 2px 7px;
+  border-radius: 3px; text-transform: uppercase; letter-spacing: .06em; background: var(--dim); color: #fff; }
+.incident-open .incident-badge { background: var(--red); }
+.incident-rotated .incident-badge { background: var(--accent); color: #000; }
+.incident-title { font-weight: 600; }
+.incident-meta { font-size: 12.5px; color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; }
+.incident-playbook { margin-top: 10px; font-size: 13px; }
+.incident-playbook summary { cursor: pointer; font-weight: 600; }
+.incident-playbook ol { margin: 8px 0 8px 18px; line-height: 1.6; }
+.incident-pre { font-family: var(--mono); font-size: 11.5px; white-space: pre-wrap; overflow-x: auto;
+  background: var(--panel, rgba(255,255,255,.03)); padding: 10px; border-radius: 4px; }
+.incident-link { color: var(--blue); font-size: 12.5px; }
+.incident-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.incident-result { font-size: 12.5px; }
+.ai-text { font-size: 13px; color: var(--text); line-height: 1.75; white-space: pre-line; }
+.ai-review-tag { font-family: var(--mono); font-size: 10px; font-weight: 700; padding: 2px 5px;
+  border-radius: 3px; background: rgba(68,136,255,.14); color: var(--blue); }
+.ai-review-loc { font-family: var(--mono); font-size: 12px; color: var(--blue); margin-right: 8px; }
+.ai-review-evidence { display: block; margin-top: 4px; font-family: var(--mono); font-size: 11.5px;
+  color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* ── Summary stats ───────────────────────────────────────────── */
+.summary-bar { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 24px; }
+@media(max-width:480px) { .summary-bar { grid-template-columns: repeat(2,1fr); } }
+.summary-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; text-align: center; }
+.summary-stat .val { font-family: var(--mono); font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.summary-stat .key { font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-top: 4px; letter-spacing: .06em; text-transform: uppercase; }
+
+/* ── Category scores ─────────────────────────────────────────── */
+.cat-scores { display: grid; grid-template-columns: repeat(auto-fill,minmax(145px,1fr)); gap: 8px; margin-bottom: 28px; }
+.cat-score { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+.cat-score-name { font-size: 11px; color: var(--muted); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.cat-score-name svg { width: 12px; height: 12px; opacity: .55; flex-shrink: 0; }
+.cat-score-bar { height: 3px; background: var(--border); border-radius: 99px; margin-bottom: 7px; overflow: hidden; }
+.cat-score-fill { height: 100%; border-radius: 99px; }
+.cat-score-val { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+
+/* ── Section divider + title ─────────────────────────────────── */
+.section-sep { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+.section-title {
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title::before { content: '//'; color: var(--accent); }
+
+/* ── Check items ─────────────────────────────────────────────── */
+.checks-section { margin-bottom: 28px; }
+.check-item {
+  background: var(--surface); border: 1px solid var(--border); border-left-width: 1px;
+  border-radius: 6px; padding: 14px 16px; margin-bottom: 6px;
+  display: grid; grid-template-columns: 20px 1fr auto; gap: 12px; align-items: start;
+  transition: border-color .15s, background .15s;
+}
+.check-item:hover { border-color: var(--border2); background: var(--surface2); }
+.check-item.fail {
+  border-left: 3px solid rgba(255,68,102,.35); border-radius: 4px 6px 6px 4px;
+}
+.check-item.fail:hover { border-left-color: rgba(255,68,102,.7); }
+.check-icon-cell { display: flex; justify-content: center; padding-top: 2px; }
+/* A grid item defaults to min-width:auto, so one unbreakable token — a commit
+   SHA in a recommendation — sets the column's minimum and pushes the whole page
+   sideways. min-width:0 lets the column shrink; the code block scrolls inside
+   itself instead of scrolling the document. */
+.check-item > * { min-width: 0; }
+.check-name, .check-desc { overflow-wrap: anywhere; }
+.check-icon-cell svg { width: 14px; height: 14px; }
+.check-name { font-size: 13px; font-weight: 600; color: #e8f4ff; letter-spacing: -.01em; }
+.check-desc { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.6; }
+.check-cat { font-family: var(--mono); font-size: 11.5px; color: var(--dim); margin-top: 5px; letter-spacing: .06em; text-transform: uppercase; }
+.check-rec {
+  font-size: 12px; color: var(--amber); margin-top: 8px;
+  padding: 8px 12px; background: rgba(255,170,0,.05);
+  border-left: 2px solid rgba(255,170,0,.3); border-radius: 0 4px 4px 0;
+  /* `pre` kept the indentation of the multi-line snippets and silently cut every
+     prose recommendation off at the right edge — the actionable half of the
+     report, hidden behind a scrollbar nobody could see. `pre-wrap` keeps the
+     newlines and wraps the long lines instead. */
+  white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: auto;
+  font-family: var(--mono); line-height: 1.65; letter-spacing: .01em;
+}
+.badge-sev {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  padding: 3px 8px; border-radius: 3px; flex-shrink: 0; align-self: start;
+  margin-top: 1px; letter-spacing: .06em; text-transform: uppercase;
+}
+.sev-crit { background: rgba(255,68,102,.12); color: var(--red); }
+.sev-warn { background: rgba(255,170,0,.12);  color: var(--amber); }
+.sev-info { background: rgba(68,136,255,.12); color: var(--blue); }
+.sev-ok   { background: rgba(0,255,136,.1);   color: var(--accent); }
+/* A leaked key the provider still accepts: the one finding that cannot wait. */
+.badge-live {
+  display: inline-block; vertical-align: 2px; margin-left: 6px;
+  font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+  padding: 2px 7px; border-radius: 3px; letter-spacing: .08em; text-transform: uppercase;
+  background: var(--red); color: #fff;
+}
+/* Checks the repository cannot act on: visible, explained, and clearly out of
+   the score rather than quietly dropped. */
+.na-section { opacity: .78; }
+.hygiene-section { opacity: .85; }
+.hygiene-summary { cursor: pointer; margin-bottom: 10px; }
+.na-reason { font-size: 12.5px; color: var(--muted); line-height: 1.6; margin: -4px 0 12px; max-width: 68ch; }
+.na-item .check-name { color: var(--muted); font-weight: 500; }
+.badge-na {
+  background: transparent; color: var(--dim); border: 1px solid var(--border2);
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  padding: 3px 8px; border-radius: 3px; flex-shrink: 0; align-self: start;
+  margin-top: 1px; letter-spacing: .06em; text-transform: uppercase;
+}
+
+/* ── Fix button ──────────────────────────────────────────── */
+.btn-fix {
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 10px;
+  height: 26px; padding: 0 10px;
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  letter-spacing: .07em; text-transform: uppercase;
+  border: 1px solid rgba(0,255,136,.3); border-radius: 4px;
+  color: var(--accent); background: rgba(0,255,136,.06);
+  cursor: pointer; transition: all .15s;
+}
+.btn-fix:hover { background: rgba(0,255,136,.12); border-color: var(--accent); }
+.btn-fix svg { width: 10px; height: 10px; flex-shrink: 0; }
+.btn-fix-pro {
+  border-color: rgba(255,170,0,.3); color: var(--amber); background: rgba(255,170,0,.05);
+}
+.btn-fix-pro:hover { background: rgba(255,170,0,.1); border-color: var(--amber); }
+
+/* ── Fix Modal ───────────────────────────────────────────── */
+.fix-modal-body { max-height: 420px; overflow-y: auto; }
+.fix-file-name {
+  font-family: var(--mono); font-size: 11px; color: var(--accent);
+  margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+}
+.fix-file-name svg { width: 12px; height: 12px; opacity: .7; }
+.fix-ai-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  background: rgba(0,255,136,.1); color: var(--accent);
+  padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(0,255,136,.2);
+}
+.fix-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.fix-copy-btn, .fix-download-btn {
+  display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 12px;
+  font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase;
+  border-radius: 4px; cursor: pointer; transition: all .15s; border: 1px solid var(--border2);
+}
+.fix-copy-btn { color: var(--muted); background: var(--surface2); }
+.fix-copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+.fix-copy-btn.copied { color: var(--accent); border-color: var(--accent); }
+.fix-download-btn { color: var(--text); background: rgba(0,255,136,.1); border-color: rgba(0,255,136,.3); }
+.fix-download-btn:hover { background: rgba(0,255,136,.18); }
+.fix-loading { text-align: center; padding: 32px; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.fix-loading .spinner-lg { margin: 0 auto 12px; }
+.fix-error { color: var(--red); font-family: var(--mono); font-size: 12px; padding: 16px; text-align: center; }
+
+/* AI suggestion */
+.ai-suggestion {
+  margin-top: 10px; padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(0,255,136,.03), rgba(68,136,255,.02));
+  border: 1px solid rgba(0,255,136,.12); border-radius: 5px;
+}
+.ai-suggestion-label { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
+.ai-suggestion-body { font-size: 12px; color: var(--text); line-height: 1.7; }
+.ai-suggestion-body pre { background: rgba(0,0,0,.4); border: 1px solid var(--border); border-radius: 4px; padding: 10px 14px; overflow-x: auto; font-family: var(--mono); font-size: 11px; color: var(--text); white-space: pre-wrap; margin: 8px 0; }
+.ai-suggestion-body code { background: rgba(0,0,0,.3); padding: 1px 5px; border-radius: 3px; font-size: 11px; font-family: var(--mono); }
+.ai-suggestion-body strong { color: var(--accent); }
+
+/* ── Passed accordion ────────────────────────────────────────── */
+.passed-header { width: 100%; background: transparent; border: 1px solid var(--border); text-align: left; font-family: inherit; color: inherit;
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+  user-select: none; padding: 4px 0; margin-bottom: 10px;
+}
+.passed-header svg { width: 13px; height: 13px; color: var(--muted); transition: transform .2s; flex-shrink: 0; }
+.passed-header.open svg { transform: rotate(90deg); }
+.passed-list { display: none; }
+.passed-list.open { display: block; }
+
+/* ── Running state ───────────────────────────────────────────── */
+.running-state { text-align: center; padding: 80px 24px; }
+.spinner-lg { width: 40px; height: 40px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── History modal ───────────────────────────────────────────── */
+.modal-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.75); backdrop-filter: blur(6px); align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; width: 92%; max-width: 600px; position: relative; animation: modal-in .2s ease; }
+@keyframes modal-in { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
+.modal-title { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+.modal-close { position: absolute; top: 14px; right: 14px; background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer; font-family: var(--mono); transition: color .15s; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+.modal-close:hover { color: var(--text); background: var(--surface2); }
+.history-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11px; margin-top: 16px; }
+.history-table th { color: var(--dim); font-weight: 400; text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--border); letter-spacing: .08em; text-transform: uppercase; font-size: 11px; }
+.history-table td { padding: 8px; border-bottom: 1px solid var(--border); color: var(--muted); }
+.history-table tr:hover td { background: var(--surface2); cursor: pointer; }
+
+/* Touch targets. A pointer that is a fingertip needs a control it can hit:
+   the copy button was 12px tall, the section toggles 22-23px, both under the
+   24px floor and well under the 44px this product promised when it grew a
+   mobile layout. Inline links inside a sentence are left alone — the exemption
+   exists because padding them out breaks the line. */
+@media (pointer: coarse), (max-width: 700px) {
+  .code-copy-btn { min-height: 32px; padding: 7px 12px; }
+  .toggle-btn { min-height: 44px; min-width: 44px; }
+  .passed-header { min-height: 44px; }
+  .plan-go { min-height: 44px; padding: 11px 16px; }
+  .btn-fix { min-height: 44px; padding: 11px 14px; }
+  .back-link { display: inline-flex; align-items: center; min-height: 44px; }
+}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  {% if audit.source == 'gitlab' %}
+  <a href="{% url 'gitlab_dashboard' %}" class="back-link">← {% trans "GitLab" %}</a>
+  {% else %}
+  <a href="{% url 'dashboard' %}" class="back-link">← {% trans "GitHub" %}</a>
+  {% endif %}
+
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <div class="audit-header">
+    <div style="min-width:0;flex:1">
+      <div class="pg-eyebrow">
+        // {% trans "audit report" %} · {{ audit.source }}{% if audit.completed_at %} · {{ audit.completed_at|date:"M j, Y, H:i" }}{% endif %}
+      </div>
+      <div class="audit-repo-name" title="{{ repo_display }}">{{ repo_display }}</div>
+      <div class="audit-meta">
+        <span>{{ checks.count }} {% trans "checks" %}</span>
+        {% if score_delta is not None %}
+        <span class="score-delta {% if score_delta > 0 %}delta-up{% elif score_delta < 0 %}delta-down{% else %}delta-flat{% endif %}">
+          {% if score_delta > 0 %}▲ +{{ score_delta }}{% elif score_delta < 0 %}▼ {{ score_delta }}{% else %}{% trans "no change" %}{% endif %}
+          <span style="color:var(--dim);font-weight:400">{% trans "vs previous run" %}</span>
+        </span>
+        {% endif %}
+        {% if audit.is_public %}<span class="public-dot">{% trans "Public" %}</span>{% endif %}
+      </div>
+    </div>
+
+    <div class="audit-actions">
+      {% if audit.status == 'done' %}
+        <!-- Re-run -->
+        <button class="btn-action" id="btn-rerun" onclick="runAuditAgain()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
+          </svg>
+          <span class="btn-label">{% trans "Re-run" %}</span>
+        </button>
+        <!-- Share -->
+        <button id="btn-share" class="btn-action {% if audit.is_public %}is-active{% endif %}" onclick="toggleShare()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          <span class="btn-label">{% trans "Share" %}</span>
+        </button>
+        <!-- History -->
+        {% if history_count > 1 %}
+        <button class="btn-action" onclick="openHistory()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          <span class="btn-label">{% trans "History" %}</span>
+        </button>
+        {% endif %}
+        <!-- AI regen -->
+        {% if subscription.is_pro %}
+        <button id="btn-regen-ai" class="btn-action" onclick="regenAI()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          <span class="btn-label">{% if audit.ai_summary %}{% trans "Update AI" %}{% else %}{% trans "AI Analysis" %}{% endif %}</span>
+        </button>
+        <a href="{% url 'audit_pdf' audit.id %}" class="btn-action">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/>
+          </svg>
+          <span class="btn-label">PDF</span>
+        </a>
+        <a href="{% url 'compliance_report' audit.id %}" class="btn-action">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+          </svg>
+          <span class="btn-label">{% trans "Compliance" %}</span>
+        </a>
+        {% else %}
+        <a href="{% url 'billing' %}" class="btn-action pro-locked">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+          </svg>
+          <span class="btn-label">PDF PRO</span>
+        </a>
+        {% endif %}
+      {% endif %}
+
+      {% if audit.score is not None %}
+      <div class="score-ring sc-{{ audit.score_color }}">
+        <span class="num">{{ audit.score }}</span>
+        <span class="lbl">{{ audit.score_label }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Share card ─────────────────────────────────────────── -->
+  {% if audit.status == 'done' %}
+  {% comment %}
+    Closed by default, always. It used to open on every visit to a public
+    report, which made a 340px sharing panel the largest thing above the fold on
+    the page a reader came to for their findings. Being public is a state — the
+    Share button already shows it — not a reason to occupy the top of the page.
+  {% endcomment %}
+  <div id="share-card" class="share-card">
+    <div class="share-card-hdr">
+      <div class="share-card-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent)">
+          <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+        </svg>
+        {% trans "Public Report" %}
+      </div>
+      <div class="toggle-wrap">
+        <span class="toggle-lbl {% if not audit.is_public %}active{% endif %}">{% trans "Private" %}</span>
+        <button class="toggle-btn {% if audit.is_public %}on{% endif %}" id="toggle-public-btn" onclick="togglePublic()" aria-pressed="{{ audit.is_public|yesno:'true,false' }}" title="{% trans 'Toggle public sharing' %}">
+          <div class="toggle-track"><div class="toggle-thumb"></div></div>
+        </button>
+        <span class="toggle-lbl {% if audit.is_public %}active{% endif %}">{% trans "Public" %}</span>
+      </div>
+    </div>
+    <p class="share-card-desc">{% trans "Share this report with your team — no login required. No personal data is exposed." %}</p>
+
+    {% if audit.is_public and public_url %}
+    <div id="share-public-section">
+      <div class="share-row-label">{% trans "Report URL" %}</div>
+      <div class="share-url-row">
+        <span class="share-url-text" id="share-url-text" title="{{ public_url }}">{{ public_url }}</span>
+        <button class="share-copy-btn" id="btn-copy-url" onclick="copyUrl()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+          </svg>
+          <span id="copy-url-lbl">{% trans "Copy" %}</span>
+        </button>
+      </div>
+
+      {% if badge_url %}
+      <div class="badge-section">
+        <div class="share-row-label" style="margin-top:16px">README Badge</div>
+        <div class="badge-preview-row">
+          <img src="{{ badge_url }}" alt="DevOps Score" style="height:20px;border-radius:2px;image-rendering:auto">
+          <span class="badge-preview-hint">← {% trans "live preview" %}</span>
+        </div>
+        <div class="code-block">
+          <div class="code-block-hdr">
+            <span class="code-block-lang">Markdown</span>
+            <button class="code-copy-btn" id="btn-copy-badge" onclick="copyBadge()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              </svg>
+              <span id="copy-badge-lbl">{% trans "Copy" %}</span>
+            </button>
+          </div>
+          <div class="code-block-body"><span class="syn-bracket">[</span><span class="syn-alt">![DevOps Score]</span><span class="syn-bracket">(</span><span class="syn-imgurl">{{ badge_url }}</span><span class="syn-bracket">)</span><span class="syn-bracket">](</span><span class="syn-link">{{ public_url }}</span><span class="syn-bracket">)</span></div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="share-empty-hint">{% trans "Enable public sharing above to get a shareable link and README badge." %}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ── Running / Failed / Done states ─────────────────────── -->
+  {% if audit.status == 'running' or audit.status == 'pending' %}
+  <div class="running-state" id="running-state-block" role="status" aria-live="polite">
+    <div class="spinner-lg"></div>
+    <p style="color:var(--muted);font-size:13px" id="running-msg-main">{% trans "Analyzing repository, please wait..." %}</p>
+    {% if subscription.is_pro %}
+    <p style="color:var(--muted);font-size:12px;margin-top:8px">{% trans "With AI analysis, this usually takes 1–3 minutes" %}</p>
+    {% else %}
+    <p style="color:var(--muted);font-size:12px;margin-top:8px">{% trans "Usually takes 20–40 seconds" %}</p>
+    {% endif %}
+  </div>
+
+  {% elif audit.status == 'failed' %}
+  <div class="fail-box" role="alert">
+    <div class="fail-icon" aria-hidden="true">✗</div>
+    <h2 class="fail-title">{% trans "The audit could not finish" %}</h2>
+    {% if audit.error_message %}
+    <p class="fail-reason">{{ audit.error_message }}</p>
+    {% endif %}
+    <p class="fail-hint">
+      {% if 'rate limit' in audit.error_message|lower %}
+        {% trans "The provider's API quota is spent. It refills hourly — try again shortly, or connect an account with its own token." %}
+      {% elif '404' in audit.error_message or 'not found' in audit.error_message|lower %}
+        {% trans "The repository could not be read. It may have been renamed, made private, or removed — check that the connected account still has access to it." %}
+      {% elif '401' in audit.error_message or '403' in audit.error_message or 'token' in audit.error_message|lower %}
+        {% trans "The access token was rejected. Reconnect the account to issue a fresh one." %}
+      {% else %}
+        {% trans "This is usually a temporary problem with the provider. Re-running the audit resolves most cases." %}
+      {% endif %}
+    </p>
+    <div class="fail-actions">
+      <button class="btn-action" onclick="runAuditAgain()">{% trans "Run it again" %}</button>
+      <a href="{% url 'connect' %}" class="btn-action">{% trans "Reconnect account" %}</a>
+    </div>
+  </div>
+
+  {% else %}
+
+  {% if audit.fail_under is not None %}
+  <div class="gate-bar {% if audit.gate %}gate-ok{% else %}gate-fail{% endif %}">
+    {% if audit.gate %}
+      {% blocktrans with score=audit.score threshold=audit.fail_under %}Clears the gate: {{ score }} against the fail_under of {{ threshold }} set in .devopsaudit.yml.{% endblocktrans %}
+    {% else %}
+      {% blocktrans with score=audit.score threshold=audit.fail_under %}Below the gate: {{ score }} against the fail_under of {{ threshold }} set in .devopsaudit.yml.{% endblocktrans %}
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if audit.config_errors %}
+  <div class="cfg-errors">
+    <div class="cfg-errors-title">{% trans ".devopsaudit.yml needs attention" %}</div>
+    <ul>{% for err in audit.config_errors %}<li>{{ err }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <div class="audit-layout">
+
+    <!-- ── Sticky sidebar ──────────────────────────────────── -->
+    <nav class="audit-sidebar" aria-label="{% trans 'Section navigation' %}">
+      <div class="sidebar-title">{% trans "SECTIONS" %}</div>
+      <a class="sidebar-link" href="#section-plan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12l5 5L20 7"/>
+        </svg>
+        {% trans "Start here" %}
+      </a>
+      <a class="sidebar-link" href="#section-ai">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+          <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        AI
+      </a>
+      <a class="sidebar-link" href="#section-summary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        {% trans "Summary" %}
+      </a>
+      <a class="sidebar-link" href="#section-categories">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        {% trans "Categories" %}
+      </a>
+      {% if failed %}
+      <a class="sidebar-link" href="#section-issues">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {% trans "Issues" %}
+        <span class="cnt">{{ failed.count }}</span>
+      </a>
+      {% endif %}
+      {% if passed %}
+      <a class="sidebar-link" href="#section-passed">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        {% trans "Passed" %}
+        <span class="cnt">{{ passed.count }}</span>
+      </a>
+      {% endif %}
+      {% if history_count > 1 %}
+      <hr class="sidebar-sep">
+      <a class="sidebar-link" onclick="openHistory()" style="cursor:pointer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        {% trans "History" %}
+      </a>
+      {% endif %}
+    </nav>
+
+    <!-- ── Main content ────────────────────────────────────── -->
+    <div id="audit-content">
+
+      {% comment %}
+        The plan leads. It used to be the fourth block, under the AI paragraph,
+        the stat tiles and the category bars — so the one part of the report
+        that says what to do arrived after three that only describe. A reader
+        opens this page to find out what is wrong and what to do about it.
+      {% endcomment %}
+      {% if plan %}
+      <hr class="section-sep">
+      <section class="plan" id="section-plan" aria-labelledby="plan-title">
+        <div class="plan-hdr">
+          <h2 class="plan-title" id="plan-title">{% trans "Start here" %}</h2>
+          {% if plan.projected_display %}
+          <div class="plan-projection">
+            <s>{{ plan.current_score }}</s> → <b>{{ plan.projected_display }}</b>/100
+          </div>
+          {% endif %}
+        </div>
+        <p class="plan-sub">
+          {% blocktrans count n=plan.items|length %}Fix this one first — ordered by what it is worth against how much work it is.{% plural %}Fix these {{ n }} first — ordered by what each is worth against how much work it is.{% endblocktrans %}
+          {% if plan.remaining %}{% blocktrans count left=plan.remaining %}{{ left }} more finding follows.{% plural %}{{ left }} more findings follow.{% endblocktrans %}{% endif %}
+        </p>
+
+        {% for item in plan.items %}
+        <div class="plan-item">
+          <div class="plan-num">{{ forloop.counter }}</div>
+          <div>
+            <div class="plan-name">{{ item.check.name|trans_str }}</div>
+            <div class="plan-meta">
+              <span class="plan-sev plan-sev-{{ item.severity }}">{{ item.severity }}</span>
+              <span class="plan-impact">+{{ item.impact }} {% trans "points" %}</span>
+              <span class="plan-effort {% if item.effort == 'instant' %}plan-effort-instant{% endif %}">{{ item.effort_label }}</span>
+            </div>
+          </div>
+          {% if item.check|is_fixable %}
+          <button type="button" class="plan-go primary"
+                  onclick="openFix({{ item.check.id }}, '{{ item.check.name|escapejs }}', {% if subscription.is_pro %}true{% else %}false{% endif %})">
+            {% trans "Fix it" %}
+          </button>
+          {% else %}
+          <a class="plan-go" href="#section-issues">{% trans "Details" %}</a>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      {% if incidents %}
+      {% comment %}Phase 6: live keys as incidents, closed only when an audit confirms the old key is dead.{% endcomment %}
+      <div id="section-incidents"></div>
+      <div class="checks-section incidents">
+        <div class="section-title">{% trans "secret incidents" %} — {{ incidents|length }}</div>
+        {% for inc in incidents %}
+        <div class="incident incident-{{ inc.status }}">
+          <div class="incident-head">
+            <span class="incident-badge">{% if inc.status == 'open' %}{% trans "live key — open" %}{% elif inc.status == 'rotated' %}{% trans "rotated — confirmed" %}{% else %}{% trans "marked rotated" %}{% endif %}</span>
+            <span class="incident-title">{{ inc.label }}{% if inc.playbook.provider %} · {{ inc.playbook.provider }}{% endif %}</span>
+          </div>
+          <div class="incident-meta">
+            <span class="ai-review-loc">{{ inc.file }}{% if inc.line %}:{{ inc.line }}{% endif %}</span>
+            {% if inc.commit %}{% blocktrans with commit=inc.commit date=inc.commit_date %}added in {{ commit }} on {{ date }}{% endblocktrans %} · {% endif %}
+            {% if inc.in_head %}{% trans "still in the current code" %}{% else %}{% trans "only in git history" %}{% endif %}
+            · {% blocktrans with when=inc.last_checked_at|date:"Y-m-d H:i" %}provider checked {{ when }}{% endblocktrans %}
+          </div>
+          {% if inc.status == 'open' %}
+          <details class="incident-playbook" open>
+            <summary>{% trans "How to rotate it" %}</summary>
+            <ol>{% for step in inc.playbook.steps %}<li>{{ step }}</li>{% endfor %}</ol>
+            {% if inc.playbook.revoke_url %}<a href="{{ inc.playbook.revoke_url }}" target="_blank" rel="noopener" class="incident-link">{% trans "Open the provider's key page" %} →</a>{% endif %}
+            <p class="na-reason">{% trans "After rotating, run the audit again: the old key is still in the history, so the scanner finds it and asks the provider. A rejected key closes this incident — that is the confirmation." %}</p>
+          </details>
+          <details class="incident-playbook">
+            <summary>{% trans "Removing it from git history (optional, after rotation)" %}</summary>
+            <pre class="incident-pre">{{ inc.history_cleanup }}</pre>
+          </details>
+          <div class="incident-actions">
+            {% if inc.fix_pr_url %}
+              <a href="{{ inc.fix_pr_url }}" target="_blank" rel="noopener" class="incident-link">{% trans "Pull request to read it from the environment" %} →</a>
+            {% elif inc.can_rewrite %}
+              <button type="button" class="btn-fix" onclick="openIncidentPr({{ inc.id }}, this)">{% trans "Open a PR: read it from an environment variable" %}</button>
+            {% endif %}
+            <button type="button" class="btn-fix" onclick="runAuditAgain()">{% trans "I rotated it — re-check" %}</button>
+            {% if inc.last_audit_id != audit.id %}
+            <form method="post" action="{% url 'incident_mark_rotated' inc.id %}" style="display:inline">{% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.path }}">
+              <button type="submit" class="btn-fix" title="{% trans 'This key was not found in the latest audit, so it cannot be re-checked.' %}">{% trans "Mark rotated" %}</button>
+            </form>
+            {% endif %}
+            <span class="incident-result" id="incident-result-{{ inc.id }}"></span>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- AI block -->
+      <div id="section-ai"></div>
+      {% comment %}
+        Shown whenever an analysis exists: a free account's monthly AI report
+        is generated (and its credit spent) exactly like a paid one, and used
+        to be hidden behind the Pro lock anyway.
+      {% endcomment %}
+      {% if subscription.is_pro or audit.ai_summary %}
+        {% if audit.ai_summary %}
+        <div class="ai-block">
+          <div class="ai-icon">🤖</div>
+          <div>
+            <div class="ai-label">AI {% trans "analysis" %}{% if audit.ai_provider %} · {{ audit.ai_provider }}{% endif %}</div>
+            <div class="ai-text">{{ audit.ai_summary }}</div>
+          </div>
+        </div>
+        {% endif %}
+      {% else %}
+      <div class="ai-block" style="border-color:rgba(255,170,0,.14);background:rgba(255,170,0,.03)">
+        <div class="ai-icon">🔒</div>
+        <div>
+          <div class="ai-label" style="color:var(--amber)">PRO — {% trans "AI Analysis" %}</div>
+          <div class="ai-text" style="color:var(--muted)">
+            {% trans "AI analysis and smart recommendations are available on the Pro plan." %}
+            <a href="{% url 'billing' %}" style="color:var(--accent);margin-left:4px">{% trans "Get Pro →" %}</a>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if audit.ai_findings %}
+      {% comment %}AI review of the build/deploy/CI files (app.ai_review). Every item quoted its line; none is scored.{% endcomment %}
+      <div id="section-ai-review"></div>
+      <div class="checks-section ai-review">
+        <div class="section-title">{% trans "AI review of build, deploy and CI files" %} — {{ audit.ai_findings|length }}</div>
+        <p class="na-reason">{% trans "Found by a model reading the files themselves. Each one points to the exact line it quotes; they are not part of the score — check them before acting." %}</p>
+        {% for f in audit.ai_findings %}
+        <div class="check-item fail">
+          <div class="check-icon-cell"><span class="ai-review-tag">AI</span></div>
+          <div>
+            <div class="check-name">{{ f.title }}</div>
+            <div class="check-desc">
+              {% if f.url %}<a href="{{ f.url }}" target="_blank" rel="noopener" class="ai-review-loc">{{ f.file }}:{{ f.line }}</a>{% else %}<span class="ai-review-loc">{{ f.file }}:{{ f.line }}</span>{% endif %}
+              <code class="ai-review-evidence">{{ f.evidence }}</code>
+            </div>
+            {% if f.why %}<div class="check-desc">{{ f.why }}</div>{% endif %}
+            {% if f.fix %}<div class="check-rec">{{ f.fix }}</div>{% endif %}
+          </div>
+          <span class="badge-sev {% if f.severity == 'high' %}sev-crit{% elif f.severity == 'medium' %}sev-warn{% else %}sev-info{% endif %}">{{ f.severity }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Summary stats -->
+      <div id="section-summary"></div>
+      <div class="summary-bar">
+        <div class="summary-stat">
+          <div class="val" style="color:var(--accent)">{{ passed.count }}</div>
+          <div class="key">{% trans "passed" %}</div>
+        </div>
+        <div class="summary-stat">
+          <div class="val" style="color:var(--red)">{{ failed.count }}</div>
+          <div class="key">{% trans "issues" %}</div>
+        </div>
+        <div class="summary-stat">
+          <div class="val">{{ checks.count }}</div>
+          <div class="key">{% trans "total" %}</div>
+        </div>
+        <div class="summary-stat">
+          <div class="val" style="font-size:15px">{{ audit.score_label }}</div>
+          <div class="key">{% trans "rating" %}</div>
+        </div>
+      </div>
+
+      <!-- Category scores -->
+      <div id="section-categories"></div>
+      {% if audit.category_scores %}
+      <div class="cat-scores">
+        {% for cat, score in audit.category_scores.items %}
+        <div class="cat-score">
+          <div class="cat-score-name">
+            {% if cat == 'security' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            {% trans "Security" %}
+            {% elif cat == 'ci_cd' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            CI/CD
+            {% elif cat == 'docker' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+            Docker
+            {% elif cat == 'docs' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            {% trans "Docs" %}
+            {% elif cat == 'deps' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+            {% trans "Deps" %}
+            {% elif cat == 'ai_agents' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8M9 13h.01M15 13h.01M9 17h6"/></svg>
+            {% trans "AI agents" %}
+            {% elif cat == 'iac' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            IaC
+            {% else %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 5.34L3.93 3.93M19.07 19.07l-1.41-1.41M5.34 18.66l-1.41 1.41M12 2v2M12 20v2M2 12H4M20 12h2"/></svg>
+            {% trans "Ops" %}
+            {% endif %}
+          </div>
+          <div class="cat-score-bar">
+            <div class="cat-score-fill" style="width:{{ score }}%;background:{% if score >= 80 %}var(--accent){% elif score >= 60 %}var(--blue){% elif score >= 40 %}var(--amber){% else %}var(--red){% endif %}"></div>
+          </div>
+          <div class="cat-score-val" style="color:{% if score >= 80 %}var(--accent){% elif score >= 60 %}var(--blue){% elif score >= 40 %}var(--amber){% else %}var(--red){% endif %}">{{ score }}%</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+
+      <!-- Failed checks -->
+      <div id="section-issues"></div>
+      {% if failed %}
+      <hr class="section-sep">
+      <div class="checks-section">
+        <div class="section-title">{% trans "issues" %} — {{ failed.count }}</div>
+        {% if request.GET.fp == 'sent' %}<p class="na-reason" role="status">{% trans "Thank you — the report was recorded. Every one is read by a person and becomes a test case." %}</p>{% endif %}
+        {% for check in failed %}
+        <div class="check-item fail">
+          <div class="check-icon-cell">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--red)">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </div>
+          <div>
+            <div class="check-name">{{ check.name|trans_str }}{% if check.check_id == 'security.secret_active' %} <span class="badge-live" title="{% trans 'The provider accepted this credential during the audit' %}">{% trans "live key" %}</span>{% endif %}</div>
+            <div class="check-desc">{{ check.description|trans_str }}</div>
+            <div class="check-cat">{{ check.category }}</div>
+            {% if subscription.is_pro and check.ai_suggestion %}
+            <div class="ai-suggestion">
+              <div class="ai-suggestion-label">🤖 {% trans "AI suggestion" %}</div>
+              <div class="ai-suggestion-body">{{ check.ai_suggestion|markdown_code|safe }}</div>
+            </div>
+            {% elif check.recommendation %}
+            <div class="check-rec">{{ check.recommendation }}</div>
+            {% endif %}
+            {% if check|is_fixable %}
+            {% if subscription.is_pro %}
+            <button class="btn-fix btn-fix-pro" onclick="openFix({{ check.id }}, '{{ check.name|escapejs }}', true)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+              ✨ AI Fix
+            </button>
+            {% else %}
+            <button class="btn-fix" onclick="openFix({{ check.id }}, '{{ check.name|escapejs }}', false)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+              {% trans "Get Fix" %}
+            </button>
+            {% endif %}
+            {% elif not subscription.is_pro %}
+            <div style="font-size:11px;color:var(--amber);margin-top:6px;opacity:.7">
+              🔒 <a href="{% url 'billing' %}" style="color:var(--amber)">Pro</a> — {% trans "AI code advice" %}
+            </div>
+            {% endif %}
+            {% if check.evidence and check.evidence != check.description %}
+            <details class="chk-ev"><summary>{% trans "Why this result" %}</summary><div>{{ check.evidence }}</div></details>
+            {% endif %}
+            {% if check.check_id %}
+            <details class="chk-fp" id="chk-{{ check.check_id }}"><summary>{% trans "This is a false positive" %}</summary>
+              <form method="post" action="{% url 'report_false_positive' %}">{% csrf_token %}
+                <input type="hidden" name="audit_id" value="{{ audit.id }}">
+                <input type="hidden" name="check_id" value="{{ check.check_id }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <textarea name="comment" rows="2" maxlength="2000" aria-label="{% trans 'What is wrong (optional)' %}"
+                          placeholder="{% trans 'What is wrong? e.g. the tests run in scripts/ci.sh (optional)' %}"></textarea>
+                <button type="submit">{% trans "Send" %}</button>
+              </form>
+            </details>
+            {% endif %}
+          </div>
+          <span class="badge-sev sev-{{ check.severity }}">{{ check.severity }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Passed checks (accordion) -->
+      <div id="section-passed"></div>
+      {% if passed %}
+      <hr class="section-sep">
+      <div class="checks-section">
+        <button type="button" class="passed-header" id="passed-header"
+                onclick="togglePassed()" aria-expanded="false" aria-controls="passed-list">
+          <span class="section-title" style="margin:0">{% trans "passed" %} — {{ passed.count }}</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="passed-chevron" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+        <div id="passed-list" class="passed-list">
+          {% for check in passed %}
+          <div class="check-item">
+            <div class="check-icon-cell">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--accent)">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div>
+              <div class="check-name">{{ check.name|trans_str }}</div>
+              <div class="check-desc">{{ check.description|trans_str }}</div>
+              <div class="check-cat">{{ check.category }}</div>
+            </div>
+            <span class="badge-sev sev-ok">ok</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if hygiene %}
+      {% comment %}Hygiene: shown, never scored — see checks.HYGIENE_CHECKS.{% endcomment %}
+      <details class="checks-section hygiene-section">
+        <summary class="section-title hygiene-summary">{% trans "Repository hygiene — not in the score" %} — {{ hygiene.count }}</summary>
+        <p class="na-reason">{% trans "Good practice rather than risk: nice to have, not counted in the score." %}</p>
+        {% for check in hygiene %}
+        <div class="check-item na-item">
+          <div class="check-icon-cell" style="color:{% if check.passed %}var(--accent){% else %}var(--dim){% endif %}">{% if check.passed %}✓{% else %}○{% endif %}</div>
+          <div>
+            <div class="check-name">{{ check.name|trans_str }}</div>
+            {% if not check.passed and check.recommendation %}<div class="check-desc">{{ check.recommendation }}</div>{% endif %}
+          </div>
+          <span class="badge-sev {% if check.passed %}sev-ok{% else %}badge-na{% endif %}">{% if check.passed %}ok{% else %}{% trans "optional" %}{% endif %}</span>
+        </div>
+        {% endfor %}
+      </details>
+      {% endif %}
+
+      {% if not_applicable %}
+      <div class="checks-section na-section">
+        <div class="section-title">{% trans "does not apply here" %} — {{ not_applicable.count }}</div>
+        <p class="na-reason">{{ not_applicable_reason }}</p>
+        {% for check in not_applicable %}
+        <div class="check-item na-item">
+          <div class="check-icon-cell">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--dim)" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </div>
+          <div>
+            <div class="check-name">{{ check.name|trans_str }}</div>
+            <div class="check-desc">{% if check.not_applicable_reason and check.not_applicable_reason != not_applicable_reason %}{{ check.not_applicable_reason }}{% else %}{{ check.description|trans_str }}{% endif %}</div>
+          </div>
+          <span class="badge-sev badge-na">{% if check.status == 'unknown' %}{% trans "unknown" %}{% else %}{% trans "n/a" %}{% endif %}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+    </div>{# /audit-content #}
+  </div>{# /audit-layout #}
+  {% endif %}
+</div>
+
+<!-- ── History Modal ──────────────────────────────────────────── -->
+<div id="history-modal" class="modal-overlay" onclick="if(event.target===this)closeHistory()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeHistory()">✕</button>
+    <div class="modal-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent)">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      {% trans "Score history" %} — {{ repo_display }}
+    </div>
+
+    {% if spark %}
+    <svg class="hist-spark" viewBox="0 0 {{ spark.width }} {{ spark.height }}" preserveAspectRatio="none"
+         role="img" aria-label="{% trans 'Score over time' %}">
+      <line x1="0" y1="{{ spark.height }}" x2="{{ spark.width }}" y2="{{ spark.height }}" stroke="var(--border)" stroke-width=".3"/>
+      <path d="{{ spark.area }}" fill="{{ spark_color }}" opacity=".12"/>
+      <polyline points="{{ spark.points }}" fill="none" stroke="{{ spark_color }}" stroke-width=".9"
+                stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      <circle cx="{{ spark.last_x }}" cy="{{ spark.last_y }}" r="1" fill="{{ spark_color }}"/>
+      {% for x in method_marks %}
+      <line x1="{{ x }}" y1="0" x2="{{ x }}" y2="{{ spark.height }}" stroke="var(--dim)" stroke-width=".4"
+            stroke-dasharray="1.5 1.5" vector-effect="non-scaling-stroke"><title>{% trans "Scoring methodology changed" %}</title></line>
+      {% endfor %}
+    </svg>
+    {% if method_marks %}<div class="hist-range"><span>┆ {% trans "dashed line: scoring methodology changed — the jump is the ruler, not the repository" %}</span></div>{% endif %}
+    <div class="hist-range">
+      <span>{% trans "low" %} {{ spark.min }}</span>
+      <span>{% trans "high" %} {{ spark.max }}</span>
+    </div>
+    {% endif %}
+
+    <table class="history-table">
+      <thead><tr><th>#</th><th>{% trans "Date" %}</th><th>{% trans "Trigger" %}</th><th>{% trans "Score" %}</th></tr></thead>
+      <tbody>
+        {% for run in history_rows %}
+        <tr onclick="window.location='/audit/{{ run.id }}/'" style="cursor:pointer">
+          <td>{{ forloop.counter }}</td>
+          <td>{{ run.created_at|date:"j M Y, H:i" }}</td>
+          <td style="color:var(--dim);font-size:11px">{{ run.trigger }}{% if run.method_changed %} · {% trans "new methodology" %}{% endif %}</td>
+          <td style="font-weight:600;color:{% if run.score >= 80 %}#00cc6a{% elif run.score >= 60 %}var(--blue){% elif run.score >= 40 %}var(--amber){% else %}var(--red){% endif %}">{{ run.score }}/100</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<!-- ── Fix Modal ───────────────────────────────────────────── -->
+<div id="fix-modal" class="modal-overlay" onclick="if(event.target===this)closeFix()">
+  <div class="modal" style="max-width:680px">
+    <button class="modal-close" onclick="closeFix()">✕</button>
+    <div class="modal-title" id="fix-modal-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent)">
+        <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
+      </svg>
+      {% trans "One-click Fix" %}
+    </div>
+    <div id="fix-modal-content">
+      <div class="fix-loading">
+        <div class="spinner-lg"></div>
+        {% trans "Generating fix..." %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// The section row scrolls sideways on a phone with its scrollbar hidden, so the
+// fade at its right edge is the only signal that there is more. Lift it once
+// the reader has reached the end, and put it back if they scroll away.
+(function () {
+  const nav = document.querySelector('.audit-sidebar');
+  if (!nav) return;
+  const sync = function () {
+    const atEnd = nav.scrollLeft + nav.clientWidth >= nav.scrollWidth - 2;
+    nav.classList.toggle('scrolled-end', atEnd);
+  };
+  nav.addEventListener('scroll', sync, { passive: true });
+  window.addEventListener('resize', sync);
+  sync();
+})();
+</script>
+{% if audit.status == 'running' or audit.status == 'pending' %}
+<script>
+const pollStart = Date.now();
+const POLL_TIMEOUT_MS = 5 * 60 * 1000;
+
+const poll = setInterval(async () => {
+  if (Date.now() - pollStart > POLL_TIMEOUT_MS) {
+    clearInterval(poll);
+    const block = document.getElementById('running-state-block');
+    if (block) {
+      block.innerHTML = `
+        <div style="color:var(--red);font-size:22px;margin-bottom:12px">✗</div>
+        <p style="color:var(--text);font-size:14px;font-weight:600;margin-bottom:6px">{% trans "Something went wrong" %}</p>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:20px">{% trans "The audit is taking too long. Please try again." %}</p>
+        <button onclick="retryAudit()" style="padding:9px 24px;background:var(--accent);color:var(--bg);font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:none;border-radius:5px;cursor:pointer">
+          {% trans "Retry" %}
+        </button>`;
+    }
+    return;
+  }
+  try {
+    const r = await fetch("{% url 'audit_status' audit.id %}");
+    const d = await r.json();
+    if (d.status === 'done' || d.status === 'failed') { clearInterval(poll); location.reload(); }
+  } catch(e) {}
+}, 2000);
+</script>
+{% endif %}
+
+<script>
+// GitLab calls it a merge request, not a pull request — the fix modal below
+// opens either kind through the same button, so its label is picked once
+// here rather than hardcoded English at every call site.
+const PR_IS_GITLAB = '{{ audit.source }}' === 'gitlab';
+const PR_LABEL_OPEN = PR_IS_GITLAB ? '{% trans "Open merge request" %}' : '{% trans "Open pull request" %}';
+const PR_LABEL_OPENED = PR_IS_GITLAB ? '{% trans "Merge request opened" %}' : '{% trans "Pull request opened" %}';
+const PR_LABEL_ERROR = PR_IS_GITLAB ? '{% trans "Could not open the merge request." %}' : '{% trans "Could not open the pull request." %}';
+
+// Sidebar: smooth scroll on click
+const sidebarLinks = document.querySelectorAll('.sidebar-link[href^="#"]');
+sidebarLinks.forEach(link => {
+  link.addEventListener('click', function(e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+// Sidebar: highlight active section on scroll
+const sectionObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const id = '#' + e.target.id;
+      sidebarLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === id));
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+document.querySelectorAll('[id^="section-"]').forEach(el => sectionObserver.observe(el));
+
+// Re-run audit from results page
+async function openIncidentPr(id, btn) {
+  const out = document.getElementById('incident-result-' + id);
+  btn.disabled = true;
+  try {
+    const r = await fetch('/incident/' + id + '/pr/', {method: 'POST',
+      headers: {'X-CSRFToken': '{{ csrf_token }}'}});
+    const d = await r.json();
+    if (d.ok) {
+      out.innerHTML = '<a href="' + encodeURI(d.pr_url) + '" target="_blank" rel="noopener">' + d.pr_url.replace(/</g, '&lt;') + '</a>';
+    } else {
+      out.textContent = d.error || 'Error';
+      btn.disabled = false;
+    }
+  } catch (e) { out.textContent = String(e); btn.disabled = false; }
+}
+
+async function runAuditAgain() {
+  const btn = document.getElementById('btn-rerun');
+  if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
+  try {
+    const r = await fetch("{% url 'run_audit' audit.id %}", {
+      method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'},
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) {
+      // Each run is its own record, so the new run has its own page.
+      window.location = d.redirect || location.href;
+    } else {
+      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+      if (d.upgrade_url) { window.location = d.upgrade_url; return; }
+      alert(d.error || '{% trans "Could not start the audit" %}');
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    alert('{% trans "Connection error" %}');
+  }
+}
+
+// Retry audit (after timeout)
+async function retryAudit() {
+  try {
+    const r = await fetch("{% url 'run_audit' audit.id %}", {
+      method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'},
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) { window.location = d.redirect || location.href; }
+    else { alert(d.error || '{% trans "Could not restart the audit" %}'); }
+  } catch(e) { alert('{% trans "Connection error" %}'); }
+}
+
+// AI regen
+async function regenAI() {
+  const btn = document.getElementById('btn-regen-ai');
+  if (!btn || btn.disabled) return;
+  btn.disabled = true;
+  const overlay = document.createElement('div');
+  overlay.className = 'running-state';
+  overlay.innerHTML = `
+    <div class="spinner-lg"></div>
+    <p style="color:var(--muted);font-size:13px;margin-top:0">{% trans "AI is analyzing the repository..." %}</p>
+    <p style="color:var(--muted);font-size:12px;margin-top:8px">{% trans "Usually 1–3 minutes — AI checks each issue" %}</p>
+  `;
+  try {
+    const r = await fetch("{% url 'regenerate_ai' audit.id %}", {
+      method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'},
+    });
+    if (r.ok) {
+      const auditContent = document.getElementById('audit-content');
+      if (auditContent) { auditContent.style.display = 'none'; auditContent.after(overlay); }
+      const pollAI = setInterval(async () => {
+        try {
+          const s = await fetch("{% url 'audit_status' audit.id %}");
+          const d = await s.json();
+          if (d.status === 'done' || d.status === 'failed') { clearInterval(pollAI); location.reload(); }
+        } catch(err) {}
+      }, 2000);
+    } else {
+      const errData = await r.json().catch(() => ({}));
+      btn.disabled = false;
+      alert(errData.error || '{% trans "Error starting AI analysis" %}');
+    }
+  } catch(e) {
+    btn.disabled = false;
+    alert('{% trans "Connection error" %}');
+  }
+}
+
+// Share panel toggle
+function toggleShare() {
+  const card = document.getElementById('share-card');
+  if (card) card.classList.toggle('open');
+}
+
+// Public toggle
+async function togglePublic() {
+  const btn = document.getElementById('toggle-public-btn');
+  if (!btn) return;
+  const wasOn = btn.classList.contains('on');
+  btn.classList.toggle('on', !wasOn);
+  btn.setAttribute('aria-pressed', String(!wasOn));
+  try {
+    const r = await fetch("{% url 'toggle_public' audit.id %}", {
+      method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'},
+    });
+    if (r.ok) location.reload();
+    else {
+      btn.classList.toggle('on', wasOn);
+      btn.setAttribute('aria-pressed', String(wasOn));
+    }
+  } catch(e) {
+    btn.classList.toggle('on', wasOn);
+    btn.setAttribute('aria-pressed', String(wasOn));
+    alert('{% trans "Connection error" %}');
+  }
+}
+
+// Copy URL
+function copyUrl() {
+  const text = document.getElementById('share-url-text')?.textContent?.trim();
+  if (!text) return;
+  copyText(text).then((ok) => {
+    const btn = document.getElementById('btn-copy-url');
+    const lbl = document.getElementById('copy-url-lbl');
+    if (btn && ok) btn.classList.add('copied');
+    if (lbl) lbl.textContent = ok ? '✓ {% trans "Copied" %}' : '{% trans "Press Ctrl+C" %}';
+    setTimeout(() => {
+      if (btn) btn.classList.remove('copied');
+      if (lbl) lbl.textContent = '{% trans "Copy" %}';
+    }, 2000);
+  });
+}
+
+// Copy badge markdown
+function copyBadge() {
+  const text = '[![DevOps Score]({{ badge_url }})]({{ public_url }})';
+  copyText(text).then((ok) => {
+    const btn = document.getElementById('btn-copy-badge');
+    const lbl = document.getElementById('copy-badge-lbl');
+    if (btn && ok) btn.classList.add('copied');
+    if (lbl) lbl.textContent = ok ? '✓ {% trans "Copied" %}' : '{% trans "Press Ctrl+C" %}';
+    setTimeout(() => {
+      if (btn) btn.classList.remove('copied');
+      if (lbl) lbl.textContent = '{% trans "Copy" %}';
+    }, 2000);
+  });
+}
+
+// Passed checks accordion
+function togglePassed() {
+  const list = document.getElementById('passed-list');
+  const chevron = document.getElementById('passed-chevron');
+  const header = document.getElementById('passed-header');
+  if (!list) return;
+  const open = list.classList.toggle('open');
+  if (chevron) chevron.style.transform = open ? 'rotate(90deg)' : '';
+  if (header) {
+    header.classList.toggle('open', open);
+    header.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+}
+
+// Modals close on Escape as well as on the backdrop, which a keyboard user
+// cannot click.
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  document.querySelectorAll('.modal-overlay.open').forEach(function (m) {
+    m.classList.remove('open');
+  });
+});
+
+// ── One-click Fix ──────────────────────────────────────────────────────────
+let _currentFixContent = '';
+let _currentFixFilename = '';
+
+async function openFix(checkId, checkName, isAI) {
+  const modal = document.getElementById('fix-modal');
+  const title = document.getElementById('fix-modal-title');
+  const content = document.getElementById('fix-modal-content');
+  if (!modal || !content) return;
+
+  title.innerHTML = `
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent)">
+      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
+    </svg>
+    ${isAI ? '✨ AI Fix' : '{% trans "One-click Fix" %}'} — ${checkName}`;
+  content.innerHTML = `<div class="fix-loading"><div class="spinner-lg"></div>${isAI ? '{% trans "AI is generating a customized fix..." %}' : '{% trans "Generating fix..." %}'}</div>`;
+  modal.classList.add('open');
+
+  try {
+    const r = await fetch(`/audit/{{ audit.id }}/fix/${checkId}/`);
+    const d = await r.json();
+
+    if (!d.ok) {
+      content.innerHTML = `<div class="fix-error">{% trans "No template available for this check yet." %}</div>`;
+      return;
+    }
+
+    _currentFixContent = d.content;
+    _currentFixFilename = d.filename;
+
+    const escaped = d.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    content.innerHTML = `
+      <div class="fix-file-name">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        </svg>
+        ${d.filename}
+        ${d.is_ai ? '<span class="fix-ai-badge">✨ AI customized</span>' : ''}
+      </div>
+      <div class="fix-modal-body">
+        <div class="code-block">
+          <div class="code-block-hdr">
+            <span class="code-block-lang">${d.language}</span>
+          </div>
+          <div class="code-block-body" style="max-height:300px;overflow-y:auto">${escaped}</div>
+        </div>
+      </div>
+      <div class="fix-actions">
+        ${d.can_open_pr ? `
+        <button class="fix-pr-btn" id="fix-pr-btn" onclick="openFixPr(${checkId})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px">
+            <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/>
+            <path d="M13 6h3a2 2 0 012 2v7"/><line x1="6" y1="9" x2="6" y2="21"/>
+          </svg>
+          <span id="fix-pr-lbl">${PR_LABEL_OPEN}</span>
+        </button>` : (d.pr_blocked ? `
+        <a class="fix-pr-btn fix-pr-fix" href="${d.pr_blocked_url}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px">
+            <path d="M12 8v5"/><path d="M12 16h.01"/><circle cx="12" cy="12" r="9"/>
+          </svg>
+          ${d.pr_blocked_cta}
+        </a>` : '')}
+        <button class="fix-copy-btn" id="fix-copy-btn" onclick="copyFix()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:10px;height:10px">
+            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+          </svg>
+          <span id="fix-copy-lbl">{% trans "Copy" %}</span>
+        </button>
+        <button class="fix-download-btn" onclick="downloadFix()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:10px;height:10px">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          {% trans "Download" %}
+        </button>
+      </div>
+      <div id="fix-pr-result" class="fix-pr-result">${d.pr_blocked ? `<span class="fix-pr-note">${d.pr_blocked}</span>` : ''}</div>`;
+  } catch(e) {
+    content.innerHTML = `<div class="fix-error">{% trans "Connection error. Please try again." %}</div>`;
+  }
+}
+
+function closeFix() {
+  document.getElementById('fix-modal')?.classList.remove('open');
+}
+
+function copyFix() {
+  if (!_currentFixContent) return;
+  copyText(_currentFixContent).then((ok) => {
+    const btn = document.getElementById('fix-copy-btn');
+    const lbl = document.getElementById('fix-copy-lbl');
+    if (btn && ok) btn.classList.add('copied');
+    if (lbl) lbl.textContent = ok ? '✓ {% trans "Copied" %}' : '{% trans "Press Ctrl+C" %}';
+    setTimeout(() => {
+      if (btn) btn.classList.remove('copied');
+      if (lbl) lbl.textContent = '{% trans "Copy" %}';
+    }, 2000);
+  });
+}
+
+function downloadFix() {
+  if (!_currentFixContent || !_currentFixFilename) return;
+  const blob = new Blob([_currentFixContent], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  // Use just the basename for download — browser handles the rest
+  a.href = url;
+  a.download = _currentFixFilename.split('/').pop();
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── History modal ──────────────────────────────────────────────────────────
+// The chart and the table are rendered server-side as inline SVG, so there is
+// nothing to build here and no charting library to load.
+function openHistory() { document.getElementById('history-modal').classList.add('open'); }
+function closeHistory() { document.getElementById('history-modal').classList.remove('open'); }
+
+// ── Open the generated fix as a pull request ───────────────────────────────
+async function openFixPr(checkId) {
+  const btn = document.getElementById('fix-pr-btn');
+  const lbl = document.getElementById('fix-pr-lbl');
+  const out = document.getElementById('fix-pr-result');
+  if (!btn || btn.disabled) return;
+  btn.disabled = true;
+  if (lbl) lbl.textContent = '{% trans "Opening…" %}';
+  if (out) out.textContent = '';
+
+  try {
+    const r = await fetch(`/audit/{{ audit.id }}/fix/${checkId}/pr/`, {
+      method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'},
+    });
+    const d = await r.json().catch(() => ({}));
+    if (d.ok && d.pr_url) {
+      if (lbl) lbl.textContent = PR_LABEL_OPENED;
+      if (out) {
+        out.innerHTML = `<a href="${d.pr_url}" target="_blank" rel="noopener">${d.pr_url}</a>`;
+        out.classList.add('ok');
+      }
+      window.open(d.pr_url, '_blank', 'noopener');
+    } else {
+      btn.disabled = false;
+      if (lbl) lbl.textContent = PR_LABEL_OPEN;
+      if (out) {
+        const msg = d.error || PR_LABEL_ERROR;
+        // Every one of these messages ends by naming a page. Link to it, rather
+        // than telling somebody to go and find it.
+        // A GitLab sign-in that only granted read gets a way to grant write
+        // right here, instead of a trip to the profile page.
+        const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        // "Reconnect" only when a new connection could actually fix it — an
+        // empty repository or a GitHub hiccup is not a token problem.
+        const help = d.reauth_url
+          ? `<a class="fix-pr-help" href="${esc(d.reauth_url)}">${esc(d.reauth_label)} →</a>`
+          : (d.reconnect ? `<a class="fix-pr-help" href="/profile/#connect">{% trans "Reconnect" %} →</a>` : '');
+        out.innerHTML = `${msg.replace(/</g, '&lt;')}${help}`;
+        out.classList.add('err');
+      }
+    }
+  } catch (e) {
+    btn.disabled = false;
+    if (lbl) lbl.textContent = PR_LABEL_OPEN;
+    if (out) { out.textContent = '{% trans "Connection error. Please try again." %}'; out.classList.add('err'); }
+  }
+}
+</script>
+{% endblock %}

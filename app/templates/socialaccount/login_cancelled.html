@@ -1,0 +1,18 @@
+{% extends "app/auth_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Sign-in cancelled" %}{% endblock %}
+{% block extra_style %}
+    .btn-submit { display: block; text-align: center; }
+{% endblock %}
+{% block card %}
+<div class="card">
+  <div class="card-head">
+    <div class="card-eyebrow">{% trans "// sign in" %}</div>
+    <div class="card-title">{% trans "Sign-in cancelled" %}</div>
+    <div class="card-sub">{% trans "You went back without granting access, so nothing was connected. You can try again, or sign in with email instead." %}</div>
+  </div>
+  <div class="card-body">
+    <a href="{% url 'login' %}" class="btn-submit">{% trans "Back to sign in" %} →</a>
+  </div>
+</div>
+{% endblock %}

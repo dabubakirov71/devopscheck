@@ -1,0 +1,2 @@
+checks:
+  secrets_in_code: pass

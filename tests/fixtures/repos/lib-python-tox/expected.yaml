@@ -1,0 +1,11 @@
+expected_type: library
+checks:
+  tests_in_ci: pass
+  dockerfile_present: na
+  container_nonroot: na
+  dockerfile_multistage: na
+  base_image_pinned: na
+  dockerignore: na
+  healthcheck: na
+  compose_resource_limits: na
+  observability: na

@@ -1,0 +1,530 @@
+{% extends "app/base.html" %}
+{% load i18n app_extras %}
+
+{% block title %}{{ repo_full_name }} — {% trans "DevOps audit" %}{% endblock %}
+{% block meta_description %}{% if scan.score is not None %}{% blocktrans with repo=repo_full_name score=scan.score %}{{ repo }} scores {{ score }}/100 on an automated DevOps audit — secrets, known CVEs, CI/CD, Docker, Kubernetes and Terraform.{% endblocktrans %}{% else %}{% blocktrans with repo=repo_full_name %}Automated DevOps audit of {{ repo }} — secrets, known CVEs, CI/CD, Docker and Terraform.{% endblocktrans %}{% endif %}{% endblock %}
+{% block canonical %}{% localized canonical %}{% endblock %}
+{% block og_title %}{{ repo_full_name }} — DevOpsCheck{% endblock %}
+{% block og_description %}{% if scan.score is not None %}{% blocktrans with score=scan.score %}Score {{ score }}/100 on an automated DevOps audit.{% endblocktrans %}{% else %}{% trans "Automated DevOps audit." %}{% endif %}{% endblock %}
+{% block og_image %}{{ og_image }}{% endblock %}
+{% block twitter_image %}{{ og_image }}{% endblock %}
+
+{% block extra_style %}
+.sr-wrap { max-width: 940px; margin: 0 auto; padding: 40px 24px 72px; }
+.sr-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+.sr-crumb { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+.sr-crumb a:hover { color: var(--accent); }
+.sr-title { font-size: clamp(24px, 4vw, 34px); font-weight: 700; letter-spacing: -.025em; color: #f0f8ff; word-break: break-word; }
+.sr-desc { color: var(--muted); font-size: 14px; margin-top: 8px; max-width: 62ch; }
+.sr-meta { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 10px; display: flex; gap: 14px; flex-wrap: wrap; }
+
+.sr-score { text-align: right; flex-shrink: 0; }
+.sr-standing {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  margin-top: 22px; padding: 12px 16px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+  transition: border-color .15s;
+}
+.sr-standing:hover { border-color: var(--border2); }
+.sr-standing-bar {
+  flex: 0 0 120px; height: 6px; border-radius: 3px;
+  background: var(--surface2); overflow: hidden;
+}
+.sr-standing-fill { display: block; height: 100%; border-radius: 3px; }
+.sr-standing-fill.s-green { background: #00cc6a; }
+.sr-standing-fill.s-blue  { background: #4488ff; }
+.sr-standing-fill.s-amber { background: #ffaa00; }
+.sr-standing-fill.s-red   { background: #ff4466; }
+.sr-standing-fill.s-gray  { background: var(--dim); }
+.sr-standing-text { font-size: 13.5px; color: var(--muted); min-width: 0; }
+.sr-standing-text strong { color: var(--text); font-weight: 700; }
+.sr-standing-more {
+  margin-left: auto; font-family: var(--mono); font-size: 11px;
+  color: var(--dim); white-space: nowrap;
+}
+.sr-standing:hover .sr-standing-more { color: var(--accent); }
+@media (max-width: 560px) {
+  .sr-standing-more { margin-left: 0; }
+}
+.sr-score-num { font-family: var(--mono); font-size: 62px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.sr-score-of { font-size: 13px; color: var(--muted); font-family: var(--mono); }
+.sr-score-label { font-family: var(--mono); font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; margin-top: 6px; }
+.s-green { color: #00cc6a } .s-blue { color: var(--blue) } .s-amber { color: var(--amber) }
+.s-red { color: var(--red) } .s-gray { color: var(--dim) }
+
+.sr-cats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin: 32px 0 0; }
+.sr-cat-name { font-family: var(--mono); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.sr-cat-bar { height: 6px; background: var(--surface2); border-radius: 3px; margin: 7px 0 5px; overflow: hidden; }
+.sr-cat-fill { height: 100%; border-radius: 3px; }
+.sr-cat-val { font-family: var(--mono); font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
+
+.sr-section-title {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600; border-top: 1px solid var(--border);
+  padding-top: 14px; margin: 44px 0 16px; display: flex; justify-content: space-between; align-items: baseline;
+}
+.sr-fold { margin-top: 0; }
+.sr-fold-summary { cursor: pointer; list-style: none; transition: color .15s; }
+.sr-fold-summary::-webkit-details-marker { display: none; }
+.sr-fold-summary:hover { color: var(--text); }
+.sr-fold-count { color: var(--dim); margin-left: 6px; }
+.sr-fold-arrow { font-size: 11px; color: var(--dim); transition: transform .2s ease; }
+.sr-fold[open] .sr-fold-arrow { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .sr-fold-arrow { transition: none; } }
+.chk {
+  display: grid; grid-template-columns: 26px 1fr; gap: 0 12px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--surface);
+  padding: 14px 16px; margin-bottom: 8px;
+}
+.chk-icon { font-family: var(--mono); font-size: 13px; padding-top: 1px; }
+/* A grid item defaults to min-width:auto, so one unbreakable token — a commit
+   SHA in a recommendation — sets the column's minimum and pushes the whole page
+   sideways. min-width:0 lets the column shrink; the code block scrolls inside
+   itself instead of scrolling the document. */
+.chk > * { min-width: 0; }
+.chk-name, .chk-desc { overflow-wrap: anywhere; }
+.chk-name { font-size: 14px; font-weight: 600; color: #e8f4ff; }
+.chk-desc { font-size: 13px; color: var(--muted); margin-top: 5px; line-height: 1.6; }
+/* pre-wrap, not pre: this is the first page a visitor sees, and `pre` hid the
+   end of every recommendation behind an invisible scrollbar. */
+.chk-rec { font-size: 12.5px; color: var(--text); margin-top: 10px;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+  border-left: 2px solid var(--border2); padding-left: 12px; font-family: var(--mono); line-height: 1.7; overflow-x: auto; }
+.chk-sev { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 3px; margin-left: 8px; vertical-align: 2px; }
+.sev-crit { background: rgba(255,68,102,.12); color: var(--red); border: 1px solid rgba(255,68,102,.25) }
+.sev-warn { background: rgba(255,170,0,.1); color: var(--amber); border: 1px solid rgba(255,170,0,.22) }
+.sev-info { background: rgba(68,136,255,.1); color: var(--blue); border: 1px solid rgba(68,136,255,.22) }
+.chk.pass { opacity: .72; }
+/* Set aside for this kind of repository — shown, explained, out of the score. */
+.chk-na { opacity: .6; }
+.chk-na .chk-name { font-weight: 500; color: var(--muted); }
+.chk-ev, .chk-fp { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+.chk-ev summary, .chk-fp summary { cursor: pointer; color: var(--dim); width: fit-content; }
+.chk-ev summary:focus-visible, .chk-fp summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chk-ev > div { font-family: var(--mono); font-size: 12px; margin-top: 6px; overflow-wrap: anywhere; line-height: 1.6; }
+.chk-evline { font-family: var(--mono); font-size: 11.5px; color: var(--dim); margin-top: 3px; overflow-wrap: anywhere; }
+.chk-fp form { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.chk-fp textarea { flex: 1 1 260px; min-width: 0; background: transparent; color: var(--text);
+  border: 1px solid var(--border); border-radius: 5px; padding: 8px; font: inherit; }
+.chk-fp button { background: transparent; color: var(--accent); border: 1px solid var(--accent);
+  border-radius: 5px; padding: 6px 14px; cursor: pointer; align-self: flex-start; }
+.chk-fp button:focus-visible, .chk-fp textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+.sr-kind summary { cursor: pointer; }
+.sr-rescan { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; }
+.sr-rescan:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chk-guide { display: inline-block; margin-top: 8px; font-size: 12.5px; color: var(--accent); }
+.sr-kind { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.sr-kind a { color: var(--dim); }
+.chk-na-reason { font-size: 12.5px; color: var(--muted); line-height: 1.6; margin: 0 0 12px; max-width: 68ch; }
+.chk.pass .chk-name { color: var(--text); font-weight: 500; }
+
+.sr-running { text-align: center; padding: 72px 20px; }
+.spinner {
+  width: 34px; height: 34px; border: 2px solid var(--border2); border-top-color: var(--accent);
+  border-radius: 50%; margin: 0 auto 20px; animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg) } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s } }
+
+.sr-cta {
+  border: 1px solid var(--accent); background: rgba(0,255,136,.05);
+  border-radius: 8px; padding: 24px; margin-top: 44px;
+}
+.sr-cta h3 { font-size: 17px; color: #f0f8ff; margin-bottom: 8px; }
+.sr-cta p { color: var(--muted); font-size: 13.5px; margin-bottom: 16px; max-width: 60ch; }
+.sr-cta a {
+  display: inline-block; font-family: var(--mono); font-size: 12px; font-weight: 700;
+  letter-spacing: .05em; padding: 11px 22px; background: var(--accent); color: var(--bg); border-radius: 4px;
+}
+/* ── Keeping the visitor ──────────────────────────────────────────────────
+   The score is the moment this page has someone's attention. Until now there
+   was nothing to do with it: no email capture anywhere public, and one call to
+   action that assumed the reader had private repositories they cared about. */
+.sr-watch {
+  margin-top: 20px; border: 1px solid var(--border2); border-radius: 8px;
+  padding: 22px 24px; background: var(--surface);
+}
+.sr-watch h3 { font-size: 16px; color: #f0f8ff; margin-bottom: 7px; }
+.sr-watch p { color: var(--muted); font-size: 13px; line-height: 1.65; margin-bottom: 16px; max-width: 62ch; }
+.sr-watch-form { display: flex; gap: 9px; flex-wrap: wrap; align-items: stretch; }
+.sr-watch-input {
+  flex: 1; min-width: 220px; padding: 11px 14px; background: var(--bg);
+  border: 1px solid var(--border2); border-radius: 5px; color: var(--text);
+  font-family: var(--sans); font-size: 13.5px; transition: border-color .15s;
+}
+.sr-watch-input::placeholder { color: var(--dim); }
+.sr-watch-input:focus { outline: none; border-color: var(--accent); }
+.sr-watch-btn {
+  padding: 11px 22px; background: var(--accent); color: var(--bg); border: none;
+  border-radius: 5px; font-family: var(--mono); font-size: 12px; font-weight: 700;
+  letter-spacing: .05em; cursor: pointer; white-space: nowrap; transition: background .15s;
+}
+.sr-watch-btn:hover { background: var(--accent2); }
+.sr-watch-fine { font-size: 11.5px; color: var(--dim); margin: 11px 0 0; line-height: 1.6; }
+.sr-watch-msg {
+  font-size: 13px; line-height: 1.6; border-radius: 5px;
+  padding: 11px 14px; margin-bottom: 15px;
+}
+.sr-watch-msg.ok  { color: var(--accent); background: var(--accent-dim); border: 1px solid rgba(0,255,136,.25); }
+.sr-watch-msg.err { color: var(--red); background: rgba(255,68,102,.06); border: 1px solid rgba(255,68,102,.25); }
+@media (max-width: 560px) {
+  .sr-watch-form { flex-direction: column; }
+  .sr-watch-input, .sr-watch-btn { width: 100%; min-height: 44px; }
+}
+
+.sr-badge-box { margin-top: 28px; }
+.sr-badge-code {
+  font-family: var(--mono); font-size: 11px; color: var(--muted); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px;
+  overflow-x: auto; white-space: nowrap; cursor: pointer;
+  width: 100%; text-align: left;
+}
+.sr-badge-code:hover { border-color: var(--border2); color: var(--text); }
+.sr-badge-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
+.sr-badge-pr {
+  display: inline-block; font-family: var(--mono); font-size: 12px; font-weight: 700;
+  letter-spacing: .04em; padding: 10px 18px; border-radius: 5px; cursor: pointer;
+  background: transparent; color: var(--accent); border: 1px solid var(--accent);
+  text-decoration: none; transition: all .15s;
+}
+.sr-badge-pr:hover { background: var(--accent); color: var(--bg); }
+.sr-badge-note { font-size: 11.5px; color: var(--dim); line-height: 1.55; flex: 1; min-width: 200px; }
+@media (max-width: 560px) {
+  .sr-badge-actions { flex-direction: column; align-items: stretch; }
+  .sr-badge-pr { width: 100%; text-align: center; min-height: 44px; line-height: 24px; }
+}
+
+/* Touch targets. A pointer that is a fingertip needs a control it can hit:
+   the copy button was 12px tall, the section toggles 22-23px, both under the
+   24px floor and well under the 44px this product promised when it grew a
+   mobile layout. Inline links inside a sentence are left alone — the exemption
+   exists because padding them out breaks the line. */
+@media (pointer: coarse), (max-width: 700px) {
+  .sr-badge-code { min-height: 44px; }
+  .sr-crumb a { display: inline-flex; align-items: center; min-height: 40px; }
+  /* "View on GitHub" is a standalone action, not a link inside a sentence, so
+     it gets a target a fingertip can hit like every other control. */
+  .sr-meta a { display: inline-flex; align-items: center; min-height: 40px; }
+}
+{% endblock %}
+
+{% block content %}
+<div class="sr-wrap">
+  {% if rate_limited %}
+    <div class="sr-running">
+      <h1 class="sr-title">{% trans "Too many scans from this address" %}</h1>
+      <p class="sr-desc" style="margin:12px auto 0">{% trans "The free scanner allows ten new repositories per hour. Already-scanned repositories keep loading normally — try again shortly, or create an account for unlimited scans." %}</p>
+      <p style="margin-top:20px"><a href="{% url 'register' %}" style="color:var(--accent)">{% trans "Create a free account" %} →</a></p>
+    </div>
+  {% else %}
+
+  <div class="sr-crumb"><a href="{% url 'scan_index' %}">{% trans "Free scanner" %}</a> / {{ owner }}</div>
+
+  <div class="sr-head">
+    <div>
+      <h1 class="sr-title">{{ repo_full_name }}</h1>
+      {% if scan.description %}<p class="sr-desc">{{ scan.description }}</p>{% endif %}
+      {% if kind_label and scan.status == 'done' %}
+      <details class="sr-kind"><summary>{% blocktrans %}Audited as: {{ kind_label }}{% endblocktrans %} · <a>{% trans "Wrong? Change" %}</a></summary>
+        <div class="chk-ev"><div>{% trans "Add .devopscheck.yml to the repository root and the next scan uses it:" %}<br>type: service &nbsp;# service | library | cli | infrastructure | monorepo | docs</div></div>
+      </details>
+      {% endif %}
+      <div class="sr-meta">
+        {% if scan.primary_language %}<span>{{ scan.primary_language }}</span>{% endif %}
+        {% if scan.stars %}<span>★ {{ scan.stars }}</span>{% endif %}
+        {% if scan.status == 'done' %}<span>{% trans "scanned" %} {{ scan.updated_at|date:"j M Y, H:i" }} UTC</span>
+        {% if scan.score_version %}<span title="{% trans 'Scoring methodology version' %}">{% blocktrans with v=scan.score_version %}methodology v{{ v }}{% endblocktrans %}</span>{% endif %}
+        {% if scan.can_rescan %}<form method="post" action="{% url 'public_rescan' owner scan_repo_name %}" style="display:inline">{% csrf_token %}<button type="submit" class="sr-rescan">{% trans "Rescan now" %} ↻</button></form>{% endif %}{% endif %}
+        <a href="{{ scan.repo_url }}" rel="nofollow noopener" target="_blank">{% trans "View on GitHub" %} ↗</a>
+      </div>
+    </div>
+    {% if scan.status == 'done' %}
+    <div class="sr-score">
+      <div class="sr-score-num s-{{ scan.score_color }}">{{ scan.score }}</div>
+      <div class="sr-score-of">/ 100</div>
+      <div class="sr-score-label s-{{ scan.score_color }}">
+        {% if scan.score >= 80 %}{% trans "Excellent" %}{% elif scan.score >= 60 %}{% trans "Good" %}{% elif scan.score >= 40 %}{% trans "Fair" %}{% else %}{% trans "Needs work" %}{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% comment %}
+    A number on its own says nothing. A standing does — and it is the line
+    people screenshot. Shown only once the corpus is large enough to mean it.
+  {% endcomment %}
+  {% if standing %}
+  <a class="sr-standing" href="{% if standing.scoped %}{% url 'rankings_language' standing.slug %}{% else %}{% url 'rankings' %}{% endif %}">
+    <span class="sr-standing-bar" aria-hidden="true">
+      <span class="sr-standing-fill s-{{ scan.score_color }}" style="width:{{ standing.percentile }}%"></span>
+    </span>
+    <span class="sr-standing-text">
+      {% if standing.scoped %}
+        {% blocktrans with pct=standing.percentile lang=standing.language n=standing.total %}Better than <strong>{{ pct }}%</strong> of the {{ n }} {{ lang }} repositories scanned{% endblocktrans %}
+      {% else %}
+        {% blocktrans with pct=standing.percentile n=standing.total %}Better than <strong>{{ pct }}%</strong> of the {{ n }} repositories scanned{% endblocktrans %}
+      {% endif %}
+    </span>
+    <span class="sr-standing-more">{% trans "see the ranking" %} →</span>
+  </a>
+  {% endif %}
+
+  {% if scan.status == 'done' %}
+    {% if scan.category_scores %}
+    <div class="sr-cats">
+      {% for key, value in scan.category_scores.items %}
+      <div>
+        <div class="sr-cat-name">{{ key }}</div>
+        <div class="sr-cat-bar">
+          <div class="sr-cat-fill" style="width:{{ value }}%;background:{% if value >= 80 %}#00cc6a{% elif value >= 60 %}#4488ff{% elif value >= 40 %}#ffaa00{% else %}#ff4466{% endif %}"></div>
+        </div>
+        <div class="sr-cat-val">{{ value }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="sr-section-title">
+      <span>{% trans "Issues" %}</span>
+      <span style="color:var(--dim)">{{ crit_count }} {% trans "critical" %} · {{ warn_count }} {% trans "warnings" %}</span>
+    </div>
+    {% if fp_state == 'sent' %}<div class="sr-watch-msg ok" role="status">{% trans "Thank you — the report was recorded. Every one is read by a person and becomes a test case." %}</div>
+    {% elif fp_state == 'throttled' %}<div class="sr-watch-msg err" role="alert">{% trans "Too many reports from this address. Try again in an hour." %}</div>
+    {% elif fp_state == 'invalid' %}<div class="sr-watch-msg err" role="alert">{% trans "That check is not a failure in this report any more." %}</div>{% endif %}
+    {% for check in failed %}
+    <div class="chk" id="chk-{{ check.check_id }}">
+      <div class="chk-icon" style="color:{% if check.severity == 'crit' %}var(--red){% elif check.severity == 'warn' %}var(--amber){% else %}var(--blue){% endif %}">✗</div>
+      <div>
+        <div class="chk-name">{{ check.name|trans_str }}<span class="chk-sev sev-{{ check.severity }}">{{ check.severity }}</span></div>
+        <div class="chk-desc">{{ check.description|trans_str }}</div>
+        {% if check.recommendation %}<div class="chk-rec">{{ check.recommendation|trans_str }}</div>{% endif %}
+        {% if check.check_id in guide_ids %}<a class="chk-guide" href="{% url 'check_guide' check.check_id %}">{% trans "Full guide: why it matters and how to fix it" %} →</a>{% endif %}
+        {% if check.evidence and check.evidence != check.description %}
+        <details class="chk-ev"><summary>{% trans "Why this result" %}</summary><div>{{ check.evidence }}</div></details>
+        {% endif %}
+        <details class="chk-fp"><summary>{% trans "This is a false positive" %}</summary>
+          <form method="post" action="{% url 'report_false_positive' %}">{% csrf_token %}
+            <input type="hidden" name="repo" value="{{ repo_full_name }}">
+            <input type="hidden" name="check_id" value="{{ check.check_id }}">
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <label class="sr-only" for="fp-{{ check.check_id }}">{% trans "What is wrong (optional)" %}</label>
+            <textarea id="fp-{{ check.check_id }}" name="comment" rows="2" maxlength="2000"
+                      placeholder="{% trans 'What is wrong? e.g. the tests run in scripts/ci.sh (optional)' %}"></textarea>
+            <button type="submit">{% trans "Send" %}</button>
+          </form>
+        </details>
+      </div>
+    </div>
+    {% empty %}
+    <div class="chk"><div class="chk-icon" style="color:var(--accent)">✓</div>
+      <div><div class="chk-name">{% trans "Nothing failed" %}</div>
+      <div class="chk-desc">{% trans "Every check in the engine passed for this repository." %}</div></div></div>
+    {% endfor %}
+
+    <div class="sr-cta">
+      <h3>{% trans "Your own repositories, including the private ones" %}</h3>
+      <p>{% trans "Connect GitHub or GitLab to audit private repositories, track the score over time, get an AI analysis of each issue, and open a fix as a pull request." %}</p>
+      <a href="{% url 'register' %}">{% trans "Create a free account" %} →</a>
+    </div>
+
+    {# Not everyone who reads this page has private repositories, and almost #}
+    {# nobody signs up on a first visit. An address costs them one field. #}
+    <div class="sr-watch" id="watch">
+      {% if watch_state == 'sent' %}
+      <div class="sr-watch-msg ok" role="status">
+        {% trans "Sent. Check your inbox — the report is in it, along with a link to confirm if you want to hear when the score changes." %}
+      </div>
+      {% elif watch_state == 'invalid' %}
+      <div class="sr-watch-msg err" role="alert">{% trans "That does not look like an email address." %}</div>
+      {% elif watch_state == 'throttled' %}
+      <div class="sr-watch-msg err" role="alert">{% trans "Too many requests from this address. Try again in an hour." %}</div>
+      {% elif watch_state == 'notready' %}
+      <div class="sr-watch-msg err" role="alert">{% trans "The scan has to finish first. Reload the page in a moment." %}</div>
+      {% endif %}
+
+      <h3>{% trans "Get this report by email" %}</h3>
+      <p>{% blocktrans with repo=repo_full_name %}The full report for {{ repo }}, sent to you now. Confirm the link in it and we will tell you whenever the score changes — no account, one click to stop.{% endblocktrans %}</p>
+      <form class="sr-watch-form" method="POST" action="{% url 'watch_subscribe' owner scan_repo_name %}">
+        {% csrf_token %}
+        <label class="visually-hidden" for="watch-email">{% trans "Email address" %}</label>
+        <input class="sr-watch-input" id="watch-email" type="email" name="email"
+               required autocomplete="email" placeholder="{% trans 'you@company.com' %}">
+        <button type="submit" class="sr-watch-btn">{% trans "Send the report" %}</button>
+      </form>
+      <p class="sr-watch-fine">{% trans "One email now. Nothing else unless you confirm, and every message carries an unsubscribe link." %}</p>
+    </div>
+
+    <div class="sr-badge-box" id="badge">
+      <div class="sr-section-title" style="margin-top:28px">{% trans "Badge for the README" %}</div>
+
+      {% if badge_state == 'opened' %}
+      <div class="sr-watch-msg ok" role="status" style="margin-bottom:14px">
+        {% trans "Pull request opened." %}
+        {% if badge_pr_url %}<a href="{{ badge_pr_url }}" style="color:inherit;text-decoration:underline">{% trans "Review and merge it" %} →</a>{% endif %}
+      </div>
+      {% elif badge_state == 'already' %}
+      <div class="sr-watch-msg ok" role="status" style="margin-bottom:14px">
+        {% trans "The README already carries this badge — nothing to change." %}
+      </div>
+      {% elif badge_state == 'error' %}
+      <div class="sr-watch-msg err" role="alert" style="margin-bottom:14px">
+        {% if badge_pr_error %}{{ badge_pr_error }}{% else %}{% trans "Could not open the pull request." %}{% endif %}
+      </div>
+      {% elif badge_state == 'notready' %}
+      <div class="sr-watch-msg err" role="alert" style="margin-bottom:14px">
+        {% trans "The scan has to finish first. Reload the page in a moment." %}
+      </div>
+      {% endif %}
+
+      <button type="button" class="sr-badge-code" onclick="copyBadge(this)" title="{% trans 'Click to copy' %}">{{ badge_markdown }}</button>
+
+      {# Copying markdown by hand is a step most people do not take. Opening the #}
+      {# pull request is the same outcome with none of the work — and for a      #}
+      {# visitor without an account it is the best reason to make one. #}
+      <div class="sr-badge-actions">
+        {% if can_open_badge_pr %}
+        <form method="POST" action="{% url 'badge_pull_request' owner scan_repo_name %}">
+          {% csrf_token %}
+          <button type="submit" class="sr-badge-pr">{% trans "Add it with a pull request" %} →</button>
+        </form>
+        <span class="sr-badge-note">{% trans "We open a branch and a PR. Nothing is pushed to your default branch." %}</span>
+        {% elif user.is_authenticated %}
+        <a class="sr-badge-pr" href="{% url 'connect' %}">{% trans "Connect GitHub to open the pull request" %} →</a>
+        <span class="sr-badge-note">{% trans "We add the badge to the README on a branch, and open the PR for you." %}</span>
+        {% else %}
+        <a class="sr-badge-pr" href="/register/?next=/scan/{{ repo_full_name }}/%3Fbadge%3D1">{% trans "Let us open the pull request" %} →</a>
+        <span class="sr-badge-note">{% trans "Free account, connect GitHub, and the badge arrives as a reviewable pull request. Nothing is pushed to your default branch." %}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% comment %}
+      What passed is reassurance, not news. Left open it was four fifths of the
+      page, pushing the one finding and the sign-up out of sight. Folded, the
+      page leads with what is wrong — and the counts still show, so nothing
+      looks hidden.
+    {% endcomment %}
+    <details class="sr-fold">
+      <summary class="sr-section-title sr-fold-summary">
+        <span>{% trans "Passed" %} <span class="sr-fold-count">{{ passed|length }}</span></span>
+        <span class="sr-fold-arrow" aria-hidden="true">▶</span>
+      </summary>
+      {% for check in passed %}
+      <div class="chk pass">
+        <div class="chk-icon" style="color:var(--accent)">✓</div>
+        <div><div class="chk-name">{{ check.name|trans_str }}</div>
+          {% if check.evidence and check.evidence != check.description %}<div class="chk-evline">{{ check.evidence|truncatechars:160 }}</div>{% endif %}</div>
+      </div>
+      {% endfor %}
+    </details>
+
+    {% if hygiene %}
+    {% comment %}Hygiene: shown, never scored — see checks.HYGIENE_CHECKS.{% endcomment %}
+    <details class="sr-fold">
+      <summary class="sr-section-title sr-fold-summary">
+        <span>{% trans "Repository hygiene — not in the score" %} <span class="sr-fold-count">{{ hygiene|length }}</span></span>
+        <span class="sr-fold-arrow" aria-hidden="true">▶</span>
+      </summary>
+      {% for check in hygiene %}
+      <div class="chk {% if check.passed %}pass{% endif %}">
+        <div class="chk-icon" style="color:var({% if check.passed %}--accent{% else %}--dim{% endif %})">{% if check.passed %}✓{% else %}○{% endif %}</div>
+        <div><div class="chk-name">{{ check.name|trans_str }}</div>{% if not check.passed and check.recommendation %}<div class="chk-desc">{{ check.recommendation|truncatechars:220 }}</div>{% endif %}</div>
+      </div>
+      {% endfor %}
+    </details>
+    {% endif %}
+
+    {% if not_applicable %}
+    <details class="sr-fold">
+      <summary class="sr-section-title sr-fold-summary">
+        <span>{% trans "Does not apply here" %} <span class="sr-fold-count">{{ not_applicable|length }}</span></span>
+        <span class="sr-fold-arrow" aria-hidden="true">▶</span>
+      </summary>
+      <p class="chk-na-reason">{{ not_applicable_reason }}</p>
+      {% for check in not_applicable %}
+      <div class="chk chk-na">
+        <div class="chk-icon" style="color:var(--dim)">–</div>
+        <div><div class="chk-name">{{ check.name|trans_str }}</div>
+          {% if check.not_applicable_reason and check.not_applicable_reason != not_applicable_reason %}<div class="chk-evline">{{ check.not_applicable_reason }}</div>{% endif %}</div>
+      </div>
+      {% endfor %}
+    </details>
+    {% endif %}
+
+    {% if unknown %}
+    <details class="sr-fold">
+      <summary class="sr-section-title sr-fold-summary">
+        <span>{% trans "Could not be checked" %} <span class="sr-fold-count">{{ unknown|length }}</span></span>
+        <span class="sr-fold-arrow" aria-hidden="true">▶</span>
+      </summary>
+      {% for check in unknown %}
+      <div class="chk chk-na">
+        <div class="chk-icon" style="color:var(--dim)">?</div>
+        <div><div class="chk-name">{{ check.name|trans_str }}</div><div class="chk-evline">{{ check.not_applicable_reason }}</div></div>
+      </div>
+      {% endfor %}
+    </details>
+    {% endif %}
+
+  {% elif scan.status == 'failed' %}
+    <div class="sr-running">
+      <h2 style="font-size:19px;margin-bottom:10px">{% trans "Could not scan this repository" %}</h2>
+      {% if scan.error_message %}
+      <p style="font-family:var(--mono);font-size:12.5px;color:var(--red);background:rgba(255,68,102,.06);border:1px solid rgba(255,68,102,.2);border-radius:5px;padding:10px 14px;max-width:520px;margin:0 auto 14px">{{ scan.error_message }}</p>
+      {% endif %}
+      <p class="sr-desc" style="margin:0 auto">{% trans "It may be private, renamed, or removed. The free scanner reads public repositories only — connect an account to audit private ones." %}</p>
+      <p style="margin-top:20px"><a href="{% url 'scan_index' %}" style="color:var(--accent)">{% trans "Try another repository" %} →</a></p>
+    </div>
+  {% else %}
+    <div class="sr-running" id="running" role="status" aria-live="polite">
+      <div class="spinner"></div>
+      <h2 style="font-size:17px;margin-bottom:8px">{% trans "Scanning the repository…" %}</h2>
+      <p class="sr-desc" style="margin:0 auto">{% trans "Reading the file tree, checking dependencies against OSV.dev, and inspecting CI, Docker and infrastructure. Usually a few seconds." %}</p>
+    </div>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyBadge(el) {
+  copyText(el.textContent.trim()).then(function (ok) {
+    var original = el.style.borderColor;
+    el.style.borderColor = ok ? 'var(--accent)' : 'var(--red)';
+    setTimeout(function () { el.style.borderColor = original; }, 900);
+  });
+}
+
+{% if scan.status == 'pending' or scan.status == 'running' %}
+// Poll until the scan lands, then show the result. Gives up after two minutes
+// rather than hammering the endpoint forever on a stuck job.
+(function () {
+  var attempts = 0;
+  var timer = setInterval(function () {
+    attempts += 1;
+    if (attempts > 40) {
+      clearInterval(timer);
+      var box = document.getElementById('running');
+      if (box) {
+        box.innerHTML = '<h2 style="font-size:17px;margin-bottom:8px">{% trans "This is taking longer than usual" %}</h2>'
+          + '<p class="sr-desc" style="margin:0 auto">{% trans "Reload the page in a moment." %}</p>';
+      }
+      return;
+    }
+    fetch("{{ status_url }}", { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (d && (d.status === 'done' || d.status === 'failed')) {
+          clearInterval(timer);
+          window.location.reload();
+        }
+      })
+      .catch(function () { /* keep polling; a transient failure is not fatal */ });
+  }, 3000);
+})();
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,113 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-devopsaudit}
+      POSTGRES_USER: ${DB_USER:-devopsaudit}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-devopsaudit}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-devopsaudit}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ..:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env
+    environment:
+      - RUN_MIGRATIONS=1
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    dns:
+      - ${DOCKER_DNS_SERVER:-8.8.8.8}
+      - 8.8.4.4
+
+  # The admin, as its own process on its own port. It shares the image, the code
+  # and the database — it has to, it is the same models — but not the public
+  # URL space: ADMIN_SITE=1 points ROOT_URLCONF at config/urls_admin.py, which
+  # serves /admin/ and nothing else. The public service does not route /admin/
+  # at all. In production this port is not published to the internet; see
+  # DEPLOY.md.
+  admin:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: python manage.py runserver 0.0.0.0:8001
+    volumes:
+      - ..:/app
+    ports:
+      - "127.0.0.1:8001:8001"
+    env_file:
+      - ../.env
+    environment:
+      # ADMIN_SITE is what makes this process the admin.
+      - ADMIN_SITE=1
+      # Migrations belong to the web service alone — two processes writing the
+      # schema at once is the race entrypoint.sh exists to prevent.
+      - RUN_MIGRATIONS=0
+    depends_on:
+      db:
+        condition: service_healthy
+      web:
+        condition: service_started
+
+  celery:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: celery -A config worker -l info --concurrency 2
+    volumes:
+      - ..:/app
+    env_file:
+      - ../.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      web:
+        condition: service_started
+    dns:
+      - ${DOCKER_DNS_SERVER:-8.8.8.8}
+      - 8.8.4.4
+
+  # Scheduled jobs: subscription expiry reminders and public-scan refresh.
+  beat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: celery -A config beat -l info
+    volumes:
+      - ..:/app
+    env_file:
+      - ../.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      web:
+        condition: service_started
+
+volumes:
+  pgdata:

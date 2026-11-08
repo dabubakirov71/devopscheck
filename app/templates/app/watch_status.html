@@ -1,0 +1,60 @@
+{% extends "app/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Email updates" %} — DevOpsCheck{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+
+{% block extra_style %}
+.ws-wrap { max-width: 560px; margin: 0 auto; padding: 72px 20px 96px; text-align: center; }
+.ws-mark { font-size: 34px; line-height: 1; margin-bottom: 20px; }
+.ws-title { font-size: 23px; color: #f0f8ff; margin-bottom: 12px; line-height: 1.3; }
+.ws-body { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 12px; }
+.ws-repo {
+  display: inline-block; font-family: var(--mono); font-size: 13px; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 5px; padding: 7px 12px; margin-bottom: 20px; overflow-wrap: anywhere;
+}
+.ws-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 26px; }
+.ws-btn {
+  display: inline-block; font-family: var(--mono); font-size: 12px; font-weight: 700;
+  letter-spacing: .05em; padding: 11px 22px; border-radius: 5px; text-decoration: none;
+  background: var(--accent); color: var(--bg);
+}
+.ws-btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--border2); font-weight: 500; }
+.ws-btn.ghost:hover { border-color: var(--accent); color: var(--accent); }
+@media (max-width: 480px) { .ws-actions { flex-direction: column; } .ws-btn { width: 100%; } }
+{% endblock %}
+
+{% block content %}
+<div class="ws-wrap">
+  {% if state == 'confirmed' %}
+    <div class="ws-mark" aria-hidden="true">✓</div>
+    <h1 class="ws-title">{% trans "You are on the list" %}</h1>
+    <div class="ws-repo">{{ watch.repo_full_name }}</div>
+    <p class="ws-body">{% trans "We will email you when this repository's score changes — and only then. No newsletter, no digest, nothing else." %}</p>
+
+  {% elif state == 'watching' %}
+    <div class="ws-mark" aria-hidden="true">✓</div>
+    <h1 class="ws-title">{% trans "Already confirmed" %}</h1>
+    <div class="ws-repo">{{ watch.repo_full_name }}</div>
+    <p class="ws-body">{% trans "This link had already been used. Nothing to do — you are on the list." %}</p>
+
+  {% elif state == 'unsubscribed' %}
+    <div class="ws-mark" aria-hidden="true">·</div>
+    <h1 class="ws-title">{% trans "Unsubscribed" %}</h1>
+    <div class="ws-repo">{{ watch.repo_full_name }}</div>
+    {# No "are you sure", no login, no second step: the alternative to an easy #}
+    {# unsubscribe is the spam button, which costs the sending domain far more. #}
+    <p class="ws-body">{% trans "You will not hear from us about this repository again. If it was a mistake, the form on the scan page will put you back." %}</p>
+
+  {% else %}
+    <div class="ws-mark" aria-hidden="true">?</div>
+    <h1 class="ws-title">{% trans "This link is not valid" %}</h1>
+    <p class="ws-body">{% trans "It may have already been used, or the subscription may have been removed. Nothing is wrong with your address." %}</p>
+  {% endif %}
+
+  <div class="ws-actions">
+    {% if scan_url %}<a class="ws-btn" href="{{ scan_url }}">{% trans "Open the report" %} →</a>{% endif %}
+    <a class="ws-btn ghost" href="{% url 'scan_index' %}">{% trans "Scan another repository" %}</a>
+  </div>
+</div>
+{% endblock %}

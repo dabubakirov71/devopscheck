@@ -1,0 +1,85 @@
+{% load i18n %}<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>{{ repo }} — {{ scan.score }}/100</title></head>
+<body style="margin:0;padding:0;background:#050607;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#050607;padding:32px 16px">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+             style="max-width:560px;background:#0f1318;border:1px solid #1a2230;border-radius:10px">
+
+        <tr><td style="padding:28px 32px 0">
+          <div style="font-family:monospace;font-size:12px;letter-spacing:.16em;color:#00ff88">[ DEVOPSCHECK ]</div>
+        </td></tr>
+
+        <tr><td style="padding:22px 32px 0">
+          <div style="font-family:monospace;font-size:13px;color:#8aa3b2;margin-bottom:10px">{{ repo }}</div>
+          <div style="font-size:44px;line-height:1;font-weight:700;color:{% if scan.score >= 80 %}#00ff88{% elif scan.score >= 60 %}#4488ff{% elif scan.score >= 40 %}#ffaa00{% else %}#ff4466{% endif %}">
+            {{ scan.score }}<span style="font-size:18px;color:#748c9e">/100</span>
+          </div>
+          <p style="margin:12px 0 0;font-size:14px;line-height:1.65;color:#8aa3b2">
+{# Labelled counts, not a sentence: "1 findings, 1 checks passed" was wrong #}
+{# in English and would have needed three plural forms in Russian to say    #}
+{# something this simple.                                                   #}
+            {% blocktrans %}Findings: {{ failed_count }} · Checks passed: {{ passed_count }}{% endblocktrans %}
+            {% if crit_count %}<span style="color:#ff4466">{% blocktrans %}Critical: {{ crit_count }}{% endblocktrans %}</span>{% endif %}
+          </p>
+        </td></tr>
+
+        {% if top_issues %}
+        <tr><td style="padding:22px 32px 0">
+          <div style="font-family:monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#748c9e;margin-bottom:10px">{% trans "Worst findings" %}</div>
+          {% for issue in top_issues %}
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:9px">
+            <tr>
+              <td style="padding:11px 13px;background:#161c22;border-left:3px solid {% if issue.severity == 'crit' %}#ff4466{% elif issue.severity == 'warn' %}#ffaa00{% else %}#4488ff{% endif %};border-radius:0 5px 5px 0">
+                <div style="font-size:13.5px;color:#d0e0f0;font-weight:600">{{ issue.name }}</div>
+                {% if issue.recommendation %}<div style="font-size:12.5px;color:#8aa3b2;margin-top:4px;line-height:1.55">{{ issue.recommendation }}</div>{% endif %}
+              </td>
+            </tr>
+          </table>
+          {% endfor %}
+        </td></tr>
+        {% endif %}
+
+        <tr><td style="padding:22px 32px 0">
+          <a href="{{ scan_url }}"
+             style="display:inline-block;background:#00ff88;color:#050607;font-family:monospace;font-size:13px;
+                    font-weight:700;letter-spacing:.05em;text-decoration:none;padding:13px 26px;border-radius:5px">
+            {% trans "Read the full report" %} →
+          </a>
+        </td></tr>
+
+        {# The confirm step. Nothing recurring is sent until this is followed —  #}
+        {# one report to an address someone typed is ordinary, a standing       #}
+        {# subscription to an address that never asked is not.                  #}
+        <tr><td style="padding:26px 32px 0">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                 style="border:1px solid #243040;border-radius:8px">
+            <tr><td style="padding:18px 20px">
+              <div style="font-size:15px;color:#f0f8ff;font-weight:600;margin-bottom:6px">{% trans "Want to know when this changes?" %}</div>
+              <p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:#8aa3b2">
+                {% trans "Confirm and we will email you when the score moves — and only then. No newsletter, no digest. One click to stop, on every message." %}
+              </p>
+              <a href="{{ confirm_url }}"
+                 style="display:inline-block;border:1px solid #00ff88;color:#00ff88;font-family:monospace;
+                        font-size:12px;font-weight:700;letter-spacing:.05em;text-decoration:none;
+                        padding:11px 20px;border-radius:5px">
+                {% trans "Yes, tell me about changes" %}
+              </a>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <tr><td style="padding:26px 32px 28px">
+          <hr style="border:none;border-top:1px solid #1a2230;margin:0 0 14px">
+          <p style="margin:0;font-size:11.5px;line-height:1.6;color:#5c7180">
+            {% blocktrans %}You asked for this report at {{ base_url }}. If you did nothing further, this is the only message you will get.{% endblocktrans %}
+            <a href="{{ unsubscribe_url }}" style="color:#748c9e">{% trans "Remove my address" %}</a>
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

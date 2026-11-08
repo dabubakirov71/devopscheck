@@ -1,0 +1,4 @@
+expected_type: monorepo
+checks:
+  dockerfile_present: pass
+  container_nonroot: pass

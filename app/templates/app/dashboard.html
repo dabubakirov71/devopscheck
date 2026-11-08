@@ -1,0 +1,375 @@
+{% extends "app/base.html" %}
+{% load i18n app_extras %}
+{% block title %}GitHub — DevOpsCheck{% endblock %}
+
+{% block extra_style %}
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .repos-grid { grid-template-columns: 1fr; }
+  .filter-bar { flex-direction: column; align-items: stretch; }
+  .filter-bar select, .filter-bar input { width: 100%; min-height: 44px; }
+  .repo-card { padding: 15px; }
+}
+
+.repos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+
+/* A broken token stops new audits; it does not make the finished ones worthless. */
+.dash-notice {
+  display: grid; grid-template-columns: 18px 1fr auto; gap: 12px; align-items: center;
+  border: 1px solid rgba(255,170,0,.3); border-left: 3px solid var(--amber);
+  background: rgba(255,170,0,.05); border-radius: 8px;
+  padding: 14px 16px; margin-bottom: 20px;
+}
+.dash-notice-icon { width: 18px; height: 18px; color: var(--amber); }
+.dash-notice-lede { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.dash-notice-sub { font-size: 12.5px; color: var(--muted); margin-top: 3px; line-height: 1.55; }
+.dash-notice-cta {
+  font-family: var(--mono); font-size: 11.5px; font-weight: 700; letter-spacing: .05em;
+  white-space: nowrap; border: 1px solid var(--border2); border-radius: 5px;
+  padding: 9px 16px; color: var(--text); transition: all .15s;
+}
+.dash-notice-cta:hover { border-color: var(--amber); color: var(--amber); background: rgba(255,170,0,.06); }
+.past-audits { margin-top: 34px; }
+.past-audits-h {
+  font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 14px;
+}
+.past-audits-sub { font-size: 12px; color: var(--muted); line-height: 1.65; margin: -6px 0 16px; max-width: 60ch; }
+/* The card stacks; the name and the score are the row inside it. It used to be
+   one anchor, which is why the remove control had nowhere to live. */
+.past-audit-body {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; text-align: left;
+}
+.past-audit-score { font-size: 17px; padding: 5px 10px; border-radius: 5px; }
+.past-audit-score small { font-size: 11.5px; opacity: .7; font-weight: 400; }
+/* The report link wears the audit button's shape so the pair reads as one row. */
+a.btn-audit { text-decoration: none; line-height: 1.4; }
+@media (max-width: 640px) {
+  .dash-notice { grid-template-columns: 18px 1fr; }
+  .dash-notice-cta { grid-column: 2; justify-self: start; }
+}
+.repo-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 18px; display: flex; flex-direction: column; gap: 12px; transition: border-color .2s, background .2s; }
+.repo-card:hover { border-color: var(--border2); background: var(--surface2); }
+.repo-name { font-family: var(--mono); font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #e8f4ff; }
+.repo-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+.repo-tag { font-family: var(--mono); font-size: 11.5px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--border); color: var(--muted); }
+.status-row { display: flex; align-items: center; gap: 8px; }
+.status-txt { font-size: 12px; }
+.btn-audit { display: block; width: 100%; padding: 9px; background: transparent; border: 1px solid var(--border2); border-radius: 4px; color: var(--muted); font-size: 12px; font-family: var(--sans); cursor: pointer; transition: all .15s; text-align: center; margin-top: auto; letter-spacing: .01em; }
+.btn-audit:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.btn-audit:disabled { opacity: .35; cursor: not-allowed; }
+.view-link { font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: center; display: block; transition: color .15s; letter-spacing: .04em; }
+.view-link:hover { color: var(--accent); }
+
+/* Filter bar */
+.filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+/* The base stylesheet already draws the control and its arrow; a `background`
+   shorthand here would reset the arrow away. */
+.filter-select { font-size: 11.5px; }
+.filter-count { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-left: auto; }
+/* Account badge */
+.account-badge { font-family: var(--mono); font-size: 11.5px; color: var(--dim); background: var(--surface2); border: 1px solid var(--border); border-radius: 99px; padding: 1px 7px; margin-top: 4px; display: inline-block; }
+
+/* Upsell modal */
+.upsell-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.75); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
+.upsell-overlay.open { display: flex; }
+.upsell-modal { background: var(--surface); border: 1px solid rgba(255,170,0,.25); border-radius: 12px; padding: 36px 32px; max-width: 420px; width: 90%; text-align: center; }
+.upsell-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.upsell-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
+.upsell-features { text-align: left; margin-bottom: 24px; }
+.upsell-feat { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text); margin-bottom: 8px; }
+.upsell-feat::before { content: '✓'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+.btn-upsell { display: block; width: 100%; padding: 12px; background: var(--accent); color: #000; font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; transition: all .15s; }
+.btn-upsell:hover { background: var(--accent2); box-shadow: 0 0 24px rgba(0,255,136,.3); }
+.btn-upsell-cancel { background: none; border: none; color: var(--muted); font-size: 12px; cursor: pointer; margin-top: 12px; font-family: var(--sans); transition: color .15s; }
+.btn-upsell-cancel:hover { color: var(--text); }
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="source-tabs">
+    <a href="{% url 'dashboard' %}" class="source-tab active">
+      <svg viewBox="0 0 24 24" fill="currentColor" style="width:13px;height:13px"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+      GitHub
+    </a>
+    <a href="{% url 'gitlab_dashboard' %}" class="source-tab">
+      <svg viewBox="0 0 24 24" fill="currentColor" style="width:13px;height:13px"><path d="M22.65 14.39L12 22.13 1.35 14.39a.84.84 0 01-.3-.94l1.22-3.78 2.44-7.51A.42.42 0 014.82 2a.43.43 0 01.58 0 .42.42 0 01.11.18l2.44 7.49h8.1l2.44-7.51A.42.42 0 0118.6 2a.43.43 0 01.58 0 .42.42 0 01.11.18l2.44 7.51L23 13.45a.84.84 0 01-.35.94z"/></svg>
+      GitLab
+    </a>
+  </div>
+
+  {% with sub=request.user.subscription %}
+  {% if not sub.is_pro %}
+  {% if repos_used >= free_limit %}
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px 16px;background:rgba(255,170,0,.06);border:1px solid rgba(255,170,0,.2);border-radius:6px;margin-bottom:20px">
+    <div style="font-size:13px;color:var(--amber)">⚡ {% trans "Free plan limit reached" %} — {{ repos_used }} / {{ free_limit }} {% trans "repositories used" %}.
+      <span style="color:var(--muted)">{% trans "Remove one to free a slot — the reports are kept." %}</span></div>
+    <a href="{% url 'billing' %}" style="font-family:var(--mono);font-size:11px;font-weight:600;padding:6px 14px;background:var(--accent);color:var(--bg);border-radius:3px;text-decoration:none;white-space:nowrap">{% trans "Upgrade to Pro" %} →</a>
+  </div>
+  {% elif repos_used >= 2 %}
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px 16px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.12);border-radius:6px;margin-bottom:20px">
+    <div style="font-size:13px;color:var(--muted)">{% trans "Free plan" %}: <strong style="color:var(--text)">{{ repos_used }} / {{ free_limit }}</strong> {% trans "repositories used" %}.</div>
+    <a href="{% url 'billing' %}" style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:5px 12px;border:1px solid var(--border2);border-radius:3px;text-decoration:none">{% trans "Upgrade to Pro" %}</a>
+  </div>
+  {% endif %}
+  {% endif %}
+  {% endwith %}
+
+  <div class="pg-hdr">
+    <div class="pg-eyebrow">// github</div>
+    <h1 class="pg-title">{% trans "GitHub repositories" %}</h1>
+    <p class="pg-sub">{% trans "Pick a repository to audit. A scan takes a few seconds." %}</p>
+  </div>
+
+{% if connection_broken %}
+<div class="dash-notice" role="status">
+  <svg class="dash-notice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/>
+  </svg>
+  <div>
+    <p class="dash-notice-lede">{% trans "The GitHub token has expired, so the repository list cannot be loaded." %}</p>
+    <p class="dash-notice-sub">{% trans "Your finished reports are below and stay readable. New audits resume as soon as the token is replaced." %}</p>
+  </div>
+  <a class="dash-notice-cta" href="{% url 'connect' %}#connect">{% trans "Reconnect" %} →</a>
+</div>
+{% endif %}
+
+  <!-- Filter bar -->
+  {% if repos %}
+  <div class="filter-bar">
+    {% if github_profiles.count > 1 %}
+    <select class="filter-select" id="filter-account" onchange="applyFilters()">
+      <option value="">{% trans "All accounts" %}</option>
+      {% for gp in github_profiles %}<option value="{{ gp.github_login }}">@{{ gp.github_login }}</option>{% endfor %}
+    </select>
+    {% endif %}
+    <select class="filter-select" id="filter-lang" onchange="applyFilters()">
+      <option value="">{% trans "All languages" %}</option>
+      {% for repo in repos %}{% if repo.language %}<option value="{{ repo.language }}">{{ repo.language }}</option>{% endif %}{% endfor %}
+    </select>
+    <select class="filter-select" id="filter-sort" onchange="applyFilters()">
+      <option value="default">{% trans "By activity" %}</option>
+      <option value="score-desc">{% trans "Score, high to low" %}</option>
+      <option value="score-asc">{% trans "Score, low to high" %}</option>
+      <option value="name">{% trans "By name" %}</option>
+    </select>
+    <span class="filter-count" id="filter-count"></span>
+  </div>
+  {% endif %}
+
+  <div class="repos-grid" id="repos-grid">
+    {% for repo in repos %}
+    {% with audit=audits_by_repo|get_item:repo.full_name %}
+    <div class="repo-card" data-lang="{{ repo.language|default:'' }}" data-score="{{ audit.score|default:'-1' }}" data-name="{{ repo.full_name|lower }}" data-account="{{ repo.account_login|default:'' }}">
+      <div>
+        <div class="repo-name">{{ repo.full_name }}</div>
+        <div class="repo-meta" style="margin-top:6px">
+          {% if repo.language %}<span class="repo-tag">{{ repo.language }}</span>{% endif %}
+          {% if repo.private %}<span class="repo-tag">private</span>{% endif %}
+          {% if repo.stargazers_count %}<span class="repo-tag">★ {{ repo.stargazers_count }}</span>{% endif %}
+          {% if github_profiles.count > 1 and repo.account_login %}<span class="repo-tag" style="color:var(--accent);border-color:rgba(0,255,136,.2)">@{{ repo.account_login }}</span>{% endif %}
+        </div>
+      </div>
+
+      {% if audit %}
+      <div class="status-row">
+        <span class="dot dot-{% if audit.status == 'done' %}green{% elif audit.status == 'running' %}amber{% elif audit.status == 'failed' %}red{% else %}muted{% endif %}"></span>
+        {% if audit.status == 'done' and audit.score is not None %}
+          <span class="score-badge score-{{ audit.score_color }}">{{ audit.score }}/100</span>
+          <span class="status-txt" style="color:var(--muted)">{{ audit.score_label }}</span>
+        {% elif audit.status == 'running' %}
+          <span class="status-txt" style="color:var(--amber)">{% trans "Running…" %}</span>
+        {% elif audit.status == 'failed' %}
+          <span class="status-txt" style="color:var(--red)">{% trans "Failed" %}</span>
+        {% else %}
+          <span class="status-txt" style="color:var(--muted)">{% trans "Queued" %}</span>
+        {% endif %}
+      </div>
+      {% if audit.status == 'done' %}
+        <a href="{% url 'audit_detail' audit.id %}" class="view-link">{% trans "view report" %} →</a>
+      {% endif %}
+      {% endif %}
+
+      {% with sub=request.user.subscription %}
+      <div class="repo-actions">
+        <form method="POST" action="{% url 'start_audit' %}"
+          {% if not sub.is_pro and repos_used >= free_limit and not audit %}
+          onsubmit="event.preventDefault();showUpsell()"
+          {% endif %}>
+          {% csrf_token %}
+          <input type="hidden" name="repo" value="{{ repo.full_name }}">
+          <input type="hidden" name="repo_url" value="{{ repo.html_url }}">
+          <button type="submit" class="btn-audit" {% if audit and audit.status == 'running' %}disabled{% endif %}>
+            {% if audit and audit.status == 'running' %}{% trans "analysing…" %}
+            {% elif audit %}{% trans "re-run audit" %}
+            {% else %}{% trans "run audit" %}{% endif %}
+          </button>
+        </form>
+        {# Only an audited repository occupies a slot, so only that one can free it. #}
+        {% if audit and audit.status != 'running' %}
+        <form method="POST" action="{% url 'remove_repo' %}" class="repo-remove-form"
+              onsubmit="return confirmRemove(this)">
+          {% csrf_token %}
+          <input type="hidden" name="source" value="github">
+          <input type="hidden" name="repo" value="{{ repo.full_name }}">
+          <input type="hidden" name="next" value="{% url 'dashboard' %}">
+          <button type="submit" class="btn-remove"
+                  title="{% trans 'Remove from your list and free the slot. Reports are kept.' %}"
+                  data-repo="{{ repo.full_name }}">{% trans "remove" %}</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endwith %}
+    </div>
+    {% endwith %}
+    {% empty %}
+    {% if not past_audits %}
+    <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--muted);font-size:13px">
+      {% trans "No repositories found, or the token is no longer valid." %}
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  {% if past_audits %}
+  <div class="past-audits">
+    <h2 class="past-audits-h">{% trans "Reports you already have" %}</h2>
+    <p class="past-audits-sub">
+      {% if connection_broken %}{% trans "The repository list could not be loaded, but these reports are yours and stay readable." %}
+      {% else %}{% trans "These are no longer in your GitHub list — renamed, transferred or deleted — but they still hold a slot until you remove them." %}{% endif %}
+    </p>
+    <div class="repos-grid">
+      {% for audit in past_audits %}
+      {# A card, not a link: it carries a form, and a form cannot live inside an anchor. #}
+      <div class="repo-card past-audit-card">
+        <div class="past-audit-body">
+          <div>
+            <div class="repo-name">{{ audit.repo_display }}</div>
+            <div class="repo-meta" style="margin-top:6px">
+              <span class="repo-tag">{{ audit.created_at|date:"j M Y" }}</span>
+              {% if audit.repo_kind %}<span class="repo-tag">{{ audit.repo_kind }}</span>{% endif %}
+            </div>
+          </div>
+          {# score_color, never score_label — the label is translated text. #}
+          <div class="score-badge past-audit-score score-{{ audit.score_color }}">
+            {% if audit.score is not None %}{{ audit.score }}<small>/100</small>{% else %}—{% endif %}
+          </div>
+        </div>
+        <div class="repo-actions">
+          <a href="{% url 'audit_detail' audit.id %}" class="btn-audit">{% trans "view report" %} →</a>
+          <form method="POST" action="{% url 'remove_repo' %}" onsubmit="return confirmRemove(this)">
+            {% csrf_token %}
+            <input type="hidden" name="source" value="github">
+            <input type="hidden" name="repo" value="{{ audit.repo_full_name }}">
+            <input type="hidden" name="next" value="{% url 'dashboard' %}">
+            <button type="submit" class="btn-remove"
+                    title="{% trans 'Remove from your list and free the slot. Reports are kept.' %}"
+                    data-repo="{{ audit.repo_display }}">{% trans "remove" %}</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% include "app/_repo_removal.html" with next_url=request.path %}
+</div>
+
+<!-- Upsell modal -->
+<div id="upsell-modal" class="upsell-overlay" onclick="if(event.target===this)closeUpsell()">
+  <div class="upsell-modal">
+    <div style="font-size:28px;margin-bottom:12px">⚡</div>
+    <div class="upsell-title">{% trans "Free plan limit" %}</div>
+    <div class="upsell-sub">{% blocktrans %}The Free plan covers {{ free_limit }} private repositories. Remove one to free a slot, or upgrade for unlimited.{% endblocktrans %}</div>
+    <div class="upsell-features">
+      <div class="upsell-feat">{% trans "Unlimited repositories" %}</div>
+      <div class="upsell-feat">{% trans "AI analysis of every issue" %}</div>
+      <div class="upsell-feat">{% trans "PDF reports" %}</div>
+      <div class="upsell-feat">{% trans "Priority support" %}</div>
+    </div>
+    <a href="{% url 'billing' %}" class="btn-upsell">{% trans "Upgrade to Pro" %} →</a>
+    <div><button class="btn-upsell-cancel" onclick="closeUpsell()">{% trans "Later" %}</button></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// A keyboard user cannot click the backdrop, so Escape closes dialogs too.
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  document.querySelectorAll('.modal-overlay.open, .modal.open, .upsell-overlay.open').forEach(function (m) {
+    m.classList.remove('open');
+  });
+});
+</script>
+<script>
+function applyFilters() {
+  const lang    = document.getElementById('filter-lang')?.value || '';
+  const sort    = document.getElementById('filter-sort')?.value || 'default';
+  const account = document.getElementById('filter-account')?.value || '';
+  const grid    = document.getElementById('repos-grid');
+  const cards   = Array.from(grid.querySelectorAll('.repo-card'));
+
+  cards.forEach(c => c.style.display = '');
+  const visible = cards.filter(c => {
+    if (lang    && c.dataset.lang    !== lang)    { c.style.display = 'none'; return false; }
+    if (account && c.dataset.account !== account) { c.style.display = 'none'; return false; }
+    return true;
+  });
+
+  if (sort === 'score-desc') {
+    visible.sort((a, b) => parseInt(b.dataset.score) - parseInt(a.dataset.score));
+  } else if (sort === 'score-asc') {
+    visible.sort((a, b) => parseInt(a.dataset.score) - parseInt(b.dataset.score));
+  } else if (sort === 'name') {
+    visible.sort((a, b) => a.dataset.name.localeCompare(b.dataset.name));
+  }
+
+  visible.forEach(c => grid.appendChild(c));
+  const cnt = document.getElementById('filter-count');
+  if (cnt) cnt.textContent = visible.length + ' {% trans "repositories" %}';
+}
+
+function showUpsell() { document.getElementById('upsell-modal').classList.add('open'); }
+function closeUpsell() { document.getElementById('upsell-modal').classList.remove('open'); }
+
+// Removing a repository is confirmed in the app's own dialog rather than a
+// native confirm(), which blocks the page and cannot be translated. The form is
+// held until the user says yes, so a mis-click never drops a slot.
+let pendingRemoveForm = null;
+function confirmRemove(form) {
+  pendingRemoveForm = form;
+  const btn = form.querySelector('.btn-remove');
+  document.getElementById('remove-repo-name').textContent = btn ? btn.dataset.repo : '';
+  const modal = document.getElementById('remove-modal');
+  modal.classList.add('open');
+  modal.querySelector('.confirm-go').focus();
+  return false;   // stops the submit the button started
+}
+function closeRemove() {
+  pendingRemoveForm = null;
+  document.getElementById('remove-modal').classList.remove('open');
+}
+function submitRemove() {
+  if (!pendingRemoveForm) return;
+  const form = pendingRemoveForm;
+  pendingRemoveForm = null;
+  form.submit();   // bypasses onsubmit by design — the confirmation already happened
+}
+
+// Deduplicate language options
+(function() {
+  const sel = document.getElementById('filter-lang');
+  if (!sel) return;
+  const seen = new Set();
+  Array.from(sel.options).forEach(opt => {
+    if (opt.value && seen.has(opt.value)) opt.remove();
+    else seen.add(opt.value);
+  });
+  applyFilters();
+})();
+</script>
+{% endblock %}

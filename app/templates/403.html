@@ -1,0 +1,158 @@
+{% load i18n %}<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:"en" }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>403 — {% trans "Forbidden" %} · DevOpsCheck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #050607; --bg2: #0a0d0f;
+      --surface: #0f1318; --surface2: #161c22;
+      --border: #1a2230; --border2: #243040;
+      --text: #d0e0f0; --muted: #8aa3b2; --dim: #748c9e;
+      --accent: #00ff88; --accent-dim: rgba(0,255,136,.07);
+      --red: #ff4466; --amber: #ffaa00;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Inter', sans-serif;
+    }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--sans); font-size: 14px;
+      line-height: 1.6; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      -webkit-font-smoothing: antialiased;
+      padding: 24px 16px;
+    }
+    body::after {
+      content: ''; position: fixed; inset: 0; z-index: 9999;
+      background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.018) 2px,rgba(0,0,0,.018) 4px);
+      pointer-events: none;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    .page { width: 100%; max-width: 520px; }
+
+    /* ── Header ── */
+    .hdr {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+      margin-bottom: 56px;
+    }
+    .hdr-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--amber); box-shadow: 0 0 8px var(--amber);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ── Error code ── */
+    .code {
+      font-family: var(--mono); font-size: clamp(52px, 14vw, 88px);
+      font-weight: 400; letter-spacing: -.02em; line-height: 1;
+      color: var(--amber); margin-bottom: 24px;
+      text-shadow: 0 0 40px rgba(255,170,0,.2);
+    }
+
+    /* ── Status line ── */
+    .status {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px; color: var(--muted);
+      margin-bottom: 36px;
+    }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      border: 1px solid rgba(255,170,0,.3); border-radius: 3px;
+      padding: 2px 8px; color: var(--amber); font-size: 11.5px; letter-spacing: .08em;
+    }
+
+    /* ── Copy ── */
+    .title {
+      font-family: var(--sans); font-size: clamp(20px, 5vw, 26px);
+      font-weight: 600; color: var(--text); margin-bottom: 10px;
+    }
+    .subtitle {
+      font-family: var(--sans); font-size: 14px; color: var(--muted);
+      line-height: 1.7; margin-bottom: 40px;
+    }
+
+    /* ── Terminal block ── */
+    .terminal {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-left: 2px solid rgba(255,170,0,.4);
+      border-radius: 6px; padding: 14px 18px; margin-bottom: 40px;
+      font-family: var(--mono); font-size: 12px;
+    }
+    .terminal-row {
+      display: flex; align-items: center; gap: 8px; color: var(--muted);
+    }
+    .prompt { color: var(--amber); flex-shrink: 0; }
+    .cmd { color: var(--text); }
+    .result { color: var(--red); margin-left: auto; }
+
+    /* ── Links ── */
+    .links { display: flex; gap: 12px; flex-wrap: wrap; }
+    .link {
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      letter-spacing: .06em; color: var(--muted);
+      border: 1px solid var(--border2); border-radius: 3px;
+      padding: 6px 14px; transition: all .15s;
+    }
+    .link:hover { border-color: var(--accent); color: var(--accent); }
+
+    .sep {
+      width: 100%; height: 1px; background: var(--border);
+      margin: 40px 0;
+    }
+
+    @media (max-width: 480px) {
+      .hdr { margin-bottom: 40px; }
+      .sep { margin: 32px 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <div class="hdr">
+      <div class="hdr-dot"></div>
+      DEVOPS AUDIT
+    </div>
+
+    <div class="code">// 403</div>
+
+    <div class="status">
+      <span class="status-badge">access_denied.error</span>
+      <span>errno=EACCES</span>
+    </div>
+
+    <h1 class="title">{% trans "Access denied" %}</h1>
+    <p class="subtitle">{% trans "You don't have permission to view this page." %}<br>{% trans "Log in with the right account or go back to the homepage." %}</p>
+
+    <div class="terminal">
+      <div class="terminal-row">
+        <span class="prompt">$</span>
+        <span class="cmd">sudo access /this/resource</span>
+        <span class="result">[permission denied]</span>
+      </div>
+    </div>
+
+    <div class="links">
+      <a href="/" class="link">[ {% trans "home" %} ]</a>
+      <a href="/login/" class="link">[ {% trans "login" %} ]</a>
+    </div>
+
+    <div class="sep"></div>
+
+    <div style="font-family:var(--mono);font-size: 11.5px;color:var(--dim)">
+      exit_code=403 &nbsp;·&nbsp; http_status=403_FORBIDDEN
+    </div>
+
+  </div>
+</body>
+</html>

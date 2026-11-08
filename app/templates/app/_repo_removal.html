@@ -1,0 +1,39 @@
+{% load i18n %}
+{% comment %}
+── The way back from a full quota ──────────────────────────────────────────────
+Removing a repository frees its slot at once; nothing is deleted, so the runs
+and the score history come back with it. Included by both dashboards, which
+pass their own `next_url` so the form returns to the page it was used on.
+{% endcomment %}
+
+{% if removed_repos %}
+<div class="removed-strip">
+  <div class="removed-strip-h">{% trans "Removed repositories" %}</div>
+  <p class="removed-strip-sub">{% trans "These no longer count against your limit. Nothing was deleted — restoring one brings its score history back with it." %}</p>
+  {% for audit in removed_repos %}
+  <div class="removed-row">
+    <span class="removed-name">{{ audit.repo_display }}</span>
+    {% if audit.score is not None %}<span class="removed-meta">{% blocktrans with score=audit.score %}last score {{ score }}{% endblocktrans %}</span>{% endif %}
+    <a class="removed-meta" href="{% url 'audit_detail' audit.id %}" style="text-decoration:underline">{% trans "report" %}</a>
+    <form method="POST" action="{% url 'restore_repo' %}">
+      {% csrf_token %}
+      <input type="hidden" name="source" value="{{ audit.source }}">
+      <input type="hidden" name="repo" value="{{ audit.repo_full_name }}">
+      <input type="hidden" name="next" value="{{ next_url }}">
+      <button type="submit" class="btn-restore">{% trans "restore" %}</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div id="remove-modal" class="confirm-overlay" role="dialog" aria-modal="true"
+     aria-labelledby="remove-modal-title" onclick="if(event.target===this)closeRemove()">
+  <div class="confirm-modal">
+    <div class="confirm-title" id="remove-modal-title">{% trans "Remove this repository?" %}</div>
+    <div class="confirm-repo" id="remove-repo-name"></div>
+    <p class="confirm-body">{% trans "It comes off your list and the slot is free straight away. The reports are kept and stay readable by link — restore it from the list at the bottom of this page whenever you want." %}</p>
+    <button type="button" class="confirm-go" onclick="submitRemove()">{% trans "Remove and free the slot" %}</button>
+    <button type="button" class="confirm-cancel" onclick="closeRemove()">{% trans "Cancel" %}</button>
+  </div>
+</div>

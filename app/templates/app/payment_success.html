@@ -1,0 +1,83 @@
+{% extends "app/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Payment received" %} — DevOpsCheck{% endblock %}
+{% block extra_style %}
+.pay-done { min-height: 78vh; display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+.pay-card { max-width: 460px; text-align: center; }
+.pay-mark { font-size: 44px; line-height: 1; margin-bottom: 18px; color: var(--accent); }
+.pay-eyebrow {
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
+}
+.pay-eyebrow.waiting { color: var(--amber); }
+.pay-title { font-size: 28px; font-weight: 700; color: #f0f8ff; letter-spacing: -.02em; margin-bottom: 12px; }
+.pay-text { font-size: 14px; color: var(--muted); margin: 0 auto 28px; line-height: 1.7; }
+.pay-next { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.pay-btn {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px;
+  padding: 11px 28px; font-weight: 600; font-size: 14px;
+  border-radius: 5px; text-decoration: none; transition: all .15s;
+  background: var(--accent); color: var(--bg); border: 1px solid var(--accent);
+}
+.pay-btn:hover { background: var(--accent2); border-color: var(--accent2); }
+.pay-btn.ghost { background: var(--surface2); color: var(--text); border-color: var(--border2); }
+.pay-btn.ghost:hover { border-color: var(--muted); }
+.spinner-lg {
+  width: 40px; height: 40px; margin: 0 auto 20px;
+  border: 2px solid var(--border); border-top-color: var(--amber);
+  border-radius: 50%; animation: spin 1s linear infinite;
+}
+@media (max-width: 520px) { .pay-title { font-size: 23px; } }
+{% endblock %}
+{% block content %}
+<div class="pay-done">
+  {% if subscription.is_pro %}
+  <div class="pay-card">
+    <div class="pay-mark">✓</div>
+    <div class="pay-eyebrow">{% trans "payment confirmed" %}</div>
+    <h1 class="pay-title">
+      {% blocktrans with plan=subscription.plan_label %}{{ plan }} is active{% endblocktrans %}
+    </h1>
+    <p class="pay-text">
+      {% if subscription.current_period_end %}
+        {% blocktrans with ends=subscription.current_period_end|date:"j M Y" %}Your access runs until {{ ends }}. Everything on the plan is available right now.{% endblocktrans %}
+      {% else %}
+        {% trans "Everything on the plan is available right now." %}
+      {% endif %}
+    </p>
+    <div class="pay-next">
+      {% if has_provider %}
+      <a href="{% url 'dashboard' %}" class="pay-btn">{% trans "Go to repositories" %} →</a>
+      {% else %}
+      {# A fresh buyer has no provider connected yet, and /dashboard/ would bounce them straight back. #}
+      <a href="{% url 'connect' %}" class="pay-btn">{% trans "Connect GitHub or GitLab" %} →</a>
+      {% endif %}
+      <a href="{% url 'billing' %}" class="pay-btn ghost">{% trans "View the receipt and plan" %}</a>
+    </div>
+  </div>
+  {% else %}
+  <div class="pay-card" id="pending-block" aria-live="polite">
+    <div class="spinner-lg"></div>
+    <div class="pay-eyebrow waiting">{% trans "payment received" %}</div>
+    <h1 class="pay-title">{% trans "Activating your plan…" %}</h1>
+    <p class="pay-text">
+      {% trans "The payment has gone through and confirmation usually takes a few seconds. This page refreshes on its own." %}
+    </p>
+    <div class="pay-next">
+      <a href="{% url 'billing' %}" class="pay-btn ghost">{% trans "Back to billing" %} →</a>
+    </div>
+    <p class="pay-text" style="margin-top:22px;font-size:12.5px">
+      {% blocktrans with email=support_email %}Still waiting after a minute? Write to {{ email }} and we will sort it out.{% endblocktrans %}
+    </p>
+  </div>
+  <script>
+    let _pollCount = 0;
+    const _pollTimer = setInterval(() => {
+      _pollCount++;
+      if (_pollCount > 15) { clearInterval(_pollTimer); return; }
+      location.reload();
+    }, 4000);
+  </script>
+  {% endif %}
+</div>
+{% endblock %}

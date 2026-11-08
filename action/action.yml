@@ -1,0 +1,91 @@
+name: 'DevOpsCheck'
+description: 'DevOps and security score for the commit under test — secrets, CVEs, Actions, Docker, Terraform. Free for public repos.'
+author: 'DevOpsCheck'
+
+branding:
+  icon: 'shield'
+  color: 'green'
+
+inputs:
+  token:
+    description: >
+      DevOpsCheck API token (Profile → Notifications & API), as a repository
+      secret. Optional for public repositories: without one the free CI
+      scanner is used. Required for private repositories.
+    required: false
+    default: ''
+  repository:
+    description: 'owner/name to audit. Defaults to the repository running the workflow.'
+    required: false
+    default: ${{ github.repository }}
+  ref:
+    description: 'Branch, tag or commit to audit. Defaults to the commit that triggered the workflow.'
+    required: false
+    default: ''
+  fail-under:
+    description: >
+      Minimum score, 0-100. Overrides fail_under in .devopsaudit.yml.
+      Leave empty to use whatever the repository declares; the step then only
+      fails if the repository set a threshold and the score is below it.
+    required: false
+    default: ''
+  fail-on-new:
+    description: 'Fail when this run introduces a finding that the previous run did not have.'
+    required: false
+    default: 'false'
+  api-url:
+    description: 'Base URL of the DevOpsCheck instance. Change only for self-hosted.'
+    required: false
+    default: 'https://devopscheck.com'
+  timeout:
+    description: 'Seconds to wait for the audit before giving up.'
+    required: false
+    default: '300'
+  comment:
+    description: 'Post the result as a pull request comment. Needs pull-requests: write.'
+    required: false
+    default: 'true'
+  sarif:
+    description: >
+      Path to write the findings as SARIF, for github/codeql-action/upload-sarif
+      (they then appear under Security → Code scanning). Empty to skip.
+    required: false
+    default: 'devopscheck.sarif'
+
+outputs:
+  score:
+    description: 'The score, 0-100.'
+    value: ${{ steps.audit.outputs.score }}
+  gate:
+    description: 'true, false, or empty when no threshold applies.'
+    value: ${{ steps.audit.outputs.gate }}
+  new-findings:
+    description: 'Number of findings this run introduced.'
+    value: ${{ steps.audit.outputs.new_findings }}
+  report-url:
+    description: 'Link to the full report.'
+    value: ${{ steps.audit.outputs.report_url }}
+  audit-id:
+    description: 'Id of the audit that ran.'
+    value: ${{ steps.audit.outputs.audit_id }}
+  sarif-file:
+    description: 'Path of the SARIF file written, if any.'
+    value: ${{ steps.audit.outputs.sarif_file }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: audit
+      shell: bash
+      env:
+        DEVOPS_AUDIT_TOKEN: ${{ inputs.token }}
+        INPUT_REPOSITORY: ${{ inputs.repository }}
+        INPUT_REF: ${{ inputs.ref }}
+        INPUT_FAIL_UNDER: ${{ inputs.fail-under }}
+        INPUT_FAIL_ON_NEW: ${{ inputs.fail-on-new }}
+        INPUT_API_URL: ${{ inputs.api-url }}
+        INPUT_TIMEOUT: ${{ inputs.timeout }}
+        INPUT_COMMENT: ${{ inputs.comment }}
+        INPUT_SARIF: ${{ inputs.sarif }}
+        GITHUB_TOKEN: ${{ github.token }}
+      run: ${{ github.action_path }}/audit.sh

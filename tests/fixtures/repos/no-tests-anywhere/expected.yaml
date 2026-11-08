@@ -1,0 +1,2 @@
+checks:
+  tests_in_ci: fail

@@ -1,0 +1,168 @@
+{% comment %}
+  The sign-in shell: styles, top bar, language switcher. auth.html (sign in,
+  sign up) and the allauth pages a social sign-in can land on extend it, so a
+  GitHub/GitLab sign-in that needs one more step looks like the same product
+  instead of an unstyled page — or, as before, no page at all.
+{% endcomment %}
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>{% block title %}{% endblock %} — DevOpsCheck</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #050607; --surface: #0f1318; --surface2: #161c22;
+      --border: #1a2230; --border2: #2a3848;
+      --text: #d0e0f0; --muted: #8aa3b2;
+      --accent: #00ff88; --accent2: #00cc6a; --accent-dim: rgba(0,255,136,.07);
+      --red: #ff4466;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Inter', sans-serif;
+    }
+    body {
+      background: var(--bg); color: var(--text); font-family: var(--sans);
+      min-height: 100vh; display: grid; place-items: center;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(0,255,136,.025) 1px,transparent 1px), linear-gradient(90deg,rgba(0,255,136,.025) 1px,transparent 1px);
+      background-size: 48px 48px; pointer-events: none;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* Top bar */
+    .top-bar {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: 52px; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 28px; background: rgba(5,6,7,.88); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border); z-index: 10;
+    }
+    .logo { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: .08em; display: flex; align-items: center; gap: 8px; }
+    .logo-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: blink 3s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    /* Lang switcher */
+    .lang-switcher { position: relative; }
+    .lang-btn { display: flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 5px 10px; border: 1px solid var(--border); border-radius: 3px; background: transparent; cursor: pointer; transition: all .15s; }
+    .lang-btn:hover { border-color: var(--border2); color: var(--text); }
+    .lang-dropdown { position: absolute; top: calc(100% + 6px); right: 0; background: var(--surface); border: 1px solid var(--border2); border-radius: 5px; overflow: hidden; min-width: 120px; box-shadow: 0 8px 24px rgba(0,0,0,.4); display: none; z-index: 200; }
+    .lang-dropdown.open { display: block; }
+    .lang-option { display: flex; align-items: center; gap: 8px; padding: 9px 14px; font-size: 12px; color: var(--muted); cursor: pointer; transition: all .12s; border: none; background: transparent; width: 100%; font-family: var(--sans); }
+    .lang-option:hover { background: var(--surface2); color: var(--text); }
+    .lang-option.current { color: var(--accent); }
+
+    .card {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 400px; margin: 52px 16px 0;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 8px; overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,.6);
+    }
+    .card-head { padding: 26px 28px 20px; border-bottom: 1px solid var(--border); background: var(--surface2); }
+    .card-eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: .15em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+    .card-title { font-size: 22px; font-weight: 700; color: #e8f4ff; letter-spacing: -.02em; margin-bottom: 4px; }
+    .card-sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .card-body { padding: 22px 28px; }
+    .card-foot { padding: 14px 28px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); text-align: center; }
+    .card-foot a { color: var(--accent); font-weight: 500; }
+
+    .social { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+    .btn-social { display: flex; align-items: center; gap: 10px; padding: 10px 14px; width: 100%; background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px; color: var(--text); font-size: 13px; font-weight: 500; font-family: var(--sans); cursor: pointer; transition: all .15s; text-decoration: none; }
+    .btn-social:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+    .btn-social.gh:hover { border-color: #6e7681; background: #1c2128; }
+    .btn-social.gl:hover { border-color: #fc6d26; }
+    .btn-social.go:hover { border-color: #4285f4; }
+    .btn-social svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .btn-social-text { flex: 1; }
+    .btn-social-arrow { color: var(--muted); }
+
+    .divider { display: flex; align-items: center; gap: 10px; margin: 18px 0; font-family: var(--mono); font-size: 11.5px; color: var(--muted); letter-spacing: .08em; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .fg { margin-bottom: 14px; }
+    .fl { display: block; font-family: var(--mono); font-size: 11.5px; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 7px; }
+    .fl-hint { font-size: 11.5px; color: var(--dim); line-height: 1.5; margin-top: 6px; }
+    .fi { width: 100%; padding: 10px 13px; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-size: 13px; font-family: var(--sans); transition: border-color .15s, box-shadow .15s; line-height: 1.4; }
+    .fi:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+    .fi::placeholder { color: var(--muted); }
+
+    .btn-submit { width: 100%; padding: 12px; margin-top: 8px; background: var(--accent); color: #050607; font-family: var(--sans); font-size: 14px; font-weight: 700; border: none; border-radius: 5px; cursor: pointer; transition: all .15s; letter-spacing: -.01em; }
+    .btn-submit:hover { background: var(--accent2); box-shadow: 0 0 24px rgba(0,255,136,.25); transform: translateY(-1px); }
+
+    .error { display: flex; align-items: center; gap: 8px; background: rgba(255,68,102,.08); border: 1px solid rgba(255,68,102,.2); border-radius: 5px; padding: 10px 13px; margin-bottom: 14px; font-size: 13px; color: var(--red); }
+    .error::before { content: '✗'; flex-shrink: 0; }
+
+    /* ── ACCESSIBILITY ───────────────────────────────────────────────────── */
+    :is(a, button, input, select, [tabindex]):focus-visible {
+      outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+
+    /* ── MOBILE ─────────────────────────────────────────────────────────── */
+    @media (max-width: 520px) {
+      .auth-wrap, .auth-card, .card { padding-left: 18px; padding-right: 18px; }
+      .form-input, .btn-social, .btn-submit, button[type="submit"] {
+        min-height: 46px; font-size: 15px;
+      }
+      .btn-social { justify-content: center; }
+    }
+  
+/* Touch targets on a fingertip pointer. The header logo and the language
+   switcher are navigation controls and get the full 44px; links that sit
+   inside a sentence are deliberately left alone, because padding them out
+   breaks the line they belong to. */
+@media (pointer: coarse), (max-width: 700px) {
+  .logo { display: inline-flex; align-items: center; min-height: 44px; }
+  .lang-btn { min-height: 44px; }
+}
+{% block extra_style %}{% endblock %}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="/" class="logo">
+    <span style="color:var(--muted);font-weight:300">[</span>
+    <div class="logo-dot"></div>
+    DEVOPSCHECK
+    <span style="color:var(--muted);font-weight:300">]</span>
+  </a>
+  <div class="lang-switcher">
+    <button class="lang-btn" onclick="this.nextElementSibling.classList.toggle('open')">
+      {% if LANGUAGE_CODE == 'ru' %}🇷🇺 RU{% else %}🇬🇧 EN{% endif %}
+      <svg viewBox="0 0 10 6" fill="currentColor" style="width:10px;height:10px"><path d="M0 0l5 6 5-6z"/></svg>
+    </button>
+    <div class="lang-dropdown">
+      <form action="{% url 'set_language' %}" method="post">
+        {% csrf_token %}<input type="hidden" name="language" value="ru"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="lang-option {% if LANGUAGE_CODE == 'ru' %}current{% endif %}">🇷🇺 Русский</button>
+      </form>
+      <form action="{% url 'set_language' %}" method="post">
+        {% csrf_token %}<input type="hidden" name="language" value="en"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="lang-option {% if LANGUAGE_CODE == 'en' %}current{% endif %}">🇬🇧 English</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% block card %}{% endblock %}
+
+<script>
+document.addEventListener('click', function(e) {
+  document.querySelectorAll('.lang-dropdown').forEach(dd => {
+    if (!dd.parentElement.contains(e.target)) dd.classList.remove('open');
+  });
+});
+</script>
+</body>
+</html>

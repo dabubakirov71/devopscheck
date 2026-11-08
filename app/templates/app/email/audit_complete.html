@@ -1,0 +1,87 @@
+{% load i18n %}{% get_current_language as cur_lang %}
+<!DOCTYPE html>
+<html lang="{{ cur_lang }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% trans "Audit complete" %} — {{ repo_display }}</title>
+</head>
+<body style="margin:0;padding:0;background:#050607;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#d0e0f0;">
+  <div style="max-width:540px;margin:0 auto;padding:32px 16px;">
+
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:32px">
+      <span style="font-family:'Courier New',monospace;font-size:14px;font-weight:700;color:#00ff88;letter-spacing:.1em">
+        ● DEVOPSCHECK
+      </span>
+    </div>
+
+    <!-- Card -->
+    <div style="background:#0f1318;border:1px solid #1a2230;border-radius:12px;padding:32px;">
+
+      <div style="font-family:'Courier New',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#4a6070;margin-bottom:12px">
+        // {% trans "audit complete" %}
+      </div>
+
+      <h1 style="font-size:20px;font-weight:700;color:#e8f4ff;margin:0 0 8px;letter-spacing:-.01em">
+        {{ repo_display }}
+      </h1>
+
+      <p style="color:#4a6070;font-size:12px;font-family:'Courier New',monospace;margin:0 0 28px">
+        {{ audit.completed_at|date:"d.m.Y H:i" }}
+      </p>
+
+      <!-- Score -->
+      <div style="display:flex;align-items:center;gap:20px;margin-bottom:28px;padding:20px;background:#0a0d0f;border-radius:8px;border:1px solid #1a2230">
+        <div style="text-align:center;flex-shrink:0">
+          <div style="font-family:'Courier New',monospace;font-size:36px;font-weight:700;line-height:1;
+            color:{% if audit.score >= 80 %}#00ff88{% elif audit.score >= 60 %}#4488ff{% elif audit.score >= 40 %}#ffaa00{% else %}#ff4466{% endif %}">
+            {{ audit.score }}
+          </div>
+          <div style="font-family:'Courier New',monospace;font-size:10px;color:#4a6070;letter-spacing:.06em">/ 100</div>
+        </div>
+        <div>
+          <div style="font-size:15px;font-weight:600;color:#e8f4ff;margin-bottom:4px">{{ audit.score_label }}</div>
+          <div style="font-size:12px;color:#4a6070">{% blocktrans with count=audit.checks.count passed=passed_count failed=failed_count %}{{ count }} проверок · {{ passed }} пройдено · {{ failed }} проблем{% endblocktrans %}</div>
+        </div>
+      </div>
+
+      {% if top_issues %}
+      <!-- Top issues -->
+      <div style="margin-bottom:24px">
+        <div style="font-family:'Courier New',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#4a6070;margin-bottom:12px">
+          // {% trans "top issues" %}
+        </div>
+        {% for issue in top_issues %}
+        <div style="padding:12px 14px;background:#0a0d0f;border-radius:6px;margin-bottom:8px;border-left:3px solid
+          {% if issue.severity == 'crit' %}#ff4466{% elif issue.severity == 'warn' %}#ffaa00{% else %}#4488ff{% endif %}">
+          <div style="font-size:13px;font-weight:600;color:#e8f4ff;margin-bottom:4px">{{ issue.name }}</div>
+          {% if issue.recommendation %}
+          <div style="font-size:12px;color:#4a6070;line-height:1.55">{{ issue.recommendation|truncatechars:120 }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- CTA -->
+      <div style="text-align:center;margin-top:28px">
+        <a href="{{ audit_url }}"
+           style="display:inline-block;background:#00ff88;color:#000;font-family:'Courier New',monospace;
+                  font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+                  padding:12px 28px;border-radius:6px;text-decoration:none">
+          {% trans "OPEN REPORT →" %}
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align:center;margin-top:24px;color:#2a3848;font-size:11px;font-family:'Courier New',monospace">
+      <p>DevOpsCheck · <a href="{{ base_url }}" style="color:#2a3848">{{ base_url }}</a></p>
+      <p style="margin-top:6px">
+        <a href="{{ base_url }}/profile/" style="color:#2a3848">{% trans "Unsubscribe from notifications" %}</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

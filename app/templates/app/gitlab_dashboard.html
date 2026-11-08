@@ -1,0 +1,168 @@
+{% extends "app/base.html" %}
+{% load i18n app_extras %}
+{% block title %}GitLab — DevOpsCheck{% endblock %}
+
+{% block extra_style %}
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .repos-grid { grid-template-columns: 1fr; }
+  .self-hosted-bar { flex-direction: column; align-items: stretch; }
+  .self-hosted-bar input, .self-hosted-bar button { width: 100%; min-height: 44px; }
+}
+
+.repos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.repo-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 18px; display: flex; flex-direction: column; gap: 12px; transition: border-color .2s, background .2s; }
+.repo-card:hover { border-color: var(--border2); background: var(--surface2); }
+.repo-name { font-family: var(--mono); font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #e8f4ff; }
+.repo-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+.repo-tag { font-family: var(--mono); font-size: 11.5px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--border); color: var(--muted); }
+.repo-tag-gl { border-color: rgba(252,109,38,.3); color: #fc6d26; }
+.status-row { display: flex; align-items: center; gap: 8px; }
+.btn-audit { display: block; width: 100%; padding: 9px; background: transparent; border: 1px solid var(--border2); border-radius: 4px; color: var(--muted); font-size: 12px; font-family: var(--sans); cursor: pointer; transition: all .15s; text-align: center; margin-top: auto; }
+.btn-audit:hover { border-color: #fc6d26; color: #fc6d26; background: rgba(252,109,38,.06); }
+.btn-audit:disabled { opacity: .35; cursor: not-allowed; }
+
+.view-link { font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: center; display: block; transition: color .15s; letter-spacing: .04em; }
+.view-link:hover { color: var(--accent); }
+.self-hosted-bar { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+.self-hosted-bar label { font-family: var(--mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; letter-spacing: .08em; text-transform: uppercase; }
+.self-hosted-bar input { flex: 1; min-width: 180px; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-family: var(--mono); font-size: 12px; transition: border-color .15s; }
+.self-hosted-bar input:focus { outline: none; border-color: #fc6d26; box-shadow: 0 0 0 3px rgba(252,109,38,.1); }
+.btn-connect-gl { padding: 8px 16px; background: #fc6d26; color: #fff; border: none; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: var(--sans); transition: opacity .15s; }
+.btn-connect-gl:hover { opacity: .88; }
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="source-tabs">
+    <a href="{% url 'dashboard' %}" class="source-tab">
+      <svg viewBox="0 0 24 24" fill="currentColor" style="width:13px;height:13px"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+      GitHub
+    </a>
+    <a href="{% url 'gitlab_dashboard' %}" class="source-tab active">
+      <svg viewBox="0 0 24 24" fill="currentColor" style="width:13px;height:13px"><path d="M22.65 14.39L12 22.13 1.35 14.39a.84.84 0 01-.3-.94l1.22-3.78 2.44-7.51A.42.42 0 014.82 2a.43.43 0 01.58 0 .42.42 0 01.11.18l2.44 7.49h8.1l2.44-7.51A.42.42 0 0118.6 2a.43.43 0 01.58 0 .42.42 0 01.11.18l2.44 7.51L23 13.45a.84.84 0 01-.35.94z"/></svg>
+      GitLab
+    </a>
+  </div>
+
+  <div class="pg-hdr">
+    <div class="pg-eyebrow">// gitlab · {{ profile.gitlab_username }}</div>
+    <h1 class="pg-title">{% trans "GitLab projects" %}</h1>
+    <p class="pg-sub">{{ profile.gitlab_url }} · {% trans "Pick a project to audit" %}</p>
+  </div>
+
+  <!-- Self-hosted / reconnect -->
+  <form class="self-hosted-bar" method="POST" action="{% url 'connect_token' %}" id="gl-reconnect-form">
+    {% csrf_token %}
+    <input type="hidden" name="provider" value="gitlab">
+    <label style="white-space:nowrap" for="gl-self-hosted-url">{% trans "GitLab PAT:" %}</label>
+    <input id="gl-self-hosted-url" type="url" name="gitlab_url" placeholder="https://gitlab.mycompany.com" value="{{ profile.gitlab_url }}" style="min-width:200px">
+    <input type="password" name="token" placeholder="glpat-xxxxxxxxxxxxxxxxxxxx" required autocomplete="off" style="min-width:190px;font-family:var(--mono);font-size:12px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+    <button type="submit" class="btn-connect-gl">{% trans "Connect" %} →</button>
+  </form>
+
+  {% if projects_error %}
+  <div style="background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.25);border-radius:6px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;font-size:13px;color:#ff6b6b">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    {{ projects_error }}
+    <a href="{% url 'connect' %}" style="margin-left:auto;color:#fc6d26;font-size:12px;white-space:nowrap">{% trans "Reconnect →" %}</a>
+  </div>
+  {% endif %}
+
+  <div class="repos-grid">
+    {% for project in projects %}
+    {% with audit=audits_by_id|get_item:project.id %}
+    <div class="repo-card">
+      <div>
+        <div class="repo-name">{{ project.path_with_namespace }}</div>
+        <div class="repo-meta" style="margin-top:6px">
+          {% if project.visibility %}<span class="repo-tag">{{ project.visibility }}</span>{% endif %}
+          {% if project.star_count %}<span class="repo-tag">★ {{ project.star_count }}</span>{% endif %}
+          <span class="repo-tag repo-tag-gl">gitlab</span>
+        </div>
+      </div>
+
+      {% if audit %}
+      <div class="status-row">
+        <span class="dot dot-{% if audit.status == 'done' %}green{% elif audit.status == 'running' %}amber{% elif audit.status == 'failed' %}red{% else %}muted{% endif %}"></span>
+        {% if audit.status == 'done' and audit.score is not None %}
+          <span class="score-badge score-{{ audit.score_color }}">{{ audit.score }}/100</span>
+          <span style="font-size:12px;color:var(--muted)">{{ audit.score_label }}</span>
+        {% elif audit.status == 'running' %}
+          <span style="font-size:12px;color:var(--amber)">{% trans "Running…" %}</span>
+        {% elif audit.status == 'failed' %}
+          <span style="font-size:12px;color:var(--red)">{% trans "Failed" %}</span>
+        {% else %}
+          <span style="font-size:12px;color:var(--muted)">{% trans "Queued" %}</span>
+        {% endif %}
+      </div>
+      {% if audit.status == 'done' %}
+        <a href="{% url 'audit_detail' audit.id %}" class="view-link">{% trans "view report" %} →</a>
+      {% endif %}
+      {% endif %}
+
+      <div class="repo-actions">
+        <form method="POST" action="{% url 'start_gitlab_audit' %}">
+          {% csrf_token %}
+          <input type="hidden" name="project_id" value="{{ project.id }}">
+          <input type="hidden" name="project_name" value="{{ project.path_with_namespace }}">
+          <input type="hidden" name="project_url" value="{{ project.web_url }}">
+          <button type="submit" class="btn-audit" {% if audit and audit.status == 'running' %}disabled{% endif %}>
+            {% if audit and audit.status == 'running' %}{% trans "analysing…" %}
+            {% elif audit %}{% trans "re-run audit" %}
+            {% else %}{% trans "run audit" %}{% endif %}
+          </button>
+        </form>
+        {# The repository key is "path::id"; audit.repo_full_name already carries it. #}
+        {% if audit and audit.status != 'running' %}
+        <form method="POST" action="{% url 'remove_repo' %}" onsubmit="return confirmRemove(this)">
+          {% csrf_token %}
+          <input type="hidden" name="source" value="gitlab">
+          <input type="hidden" name="repo" value="{{ audit.repo_full_name }}">
+          <input type="hidden" name="next" value="{% url 'gitlab_dashboard' %}">
+          <button type="submit" class="btn-remove"
+                  title="{% trans 'Remove from your list and free the slot. Reports are kept.' %}"
+                  data-repo="{{ project.path_with_namespace }}">{% trans "remove" %}</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endwith %}
+    {% empty %}
+    <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--muted);font-size:13px">
+      {% trans "No projects found." %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% include "app/_repo_removal.html" with next_url=request.path %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Removing a repository is confirmed in the app's own dialog rather than a
+// native confirm(), which blocks the page and cannot be translated. The form is
+// held until the user says yes, so a mis-click never drops a slot.
+let pendingRemoveForm = null;
+function confirmRemove(form) {
+  pendingRemoveForm = form;
+  const btn = form.querySelector('.btn-remove');
+  document.getElementById('remove-repo-name').textContent = btn ? btn.dataset.repo : '';
+  const modal = document.getElementById('remove-modal');
+  modal.classList.add('open');
+  modal.querySelector('.confirm-go').focus();
+  return false;   // stops the submit the button started
+}
+function closeRemove() {
+  pendingRemoveForm = null;
+  document.getElementById('remove-modal').classList.remove('open');
+}
+function submitRemove() {
+  if (!pendingRemoveForm) return;
+  const form = pendingRemoveForm;
+  pendingRemoveForm = null;
+  form.submit();   // bypasses onsubmit by design — the confirmation already happened
+}
+</script>
+{% endblock %}

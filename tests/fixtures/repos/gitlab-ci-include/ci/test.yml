@@ -1,0 +1,6 @@
+unit:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - pip install -e . pytest
+    - pytest

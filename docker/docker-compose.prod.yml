@@ -1,0 +1,135 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${DB_NAME:-devopsaudit}
+      POSTGRES_USER: ${DB_USER:-devopsaudit}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-devopsaudit}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --maxmemory 96mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: always
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120
+    volumes:
+      # Bind mount, not a named volume: Nginx serves /static/ straight off
+      # disk (see nginx.prod.conf) and needs a host path it can `alias` to.
+      # A named volume's backing directory lives under
+      # /var/lib/docker/volumes/..., which Nginx — a host process, not a
+      # container — cannot see; every static file 404'd until this pointed
+      # both sides at the same path.
+      - ../staticfiles_data:/app/staticfiles
+    env_file:
+      - ../.env
+    environment:
+      - RUN_MIGRATIONS=1
+    ports:
+      # Loopback only. Nginx proxies to 127.0.0.1:8000; publishing on 0.0.0.0
+      # put Gunicorn on the public internet beside it, where a request to
+      # http://<ip>:8000 skipped TLS, the auth rate limit and every security
+      # header Nginx adds.
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # The admin, as its own process. It shares the image, the code and the
+  # database — it is the same models, that part cannot be separated and should
+  # not be — but not the public URL space: ADMIN_SITE=1 points ROOT_URLCONF at
+  # config/urls_admin.py, which serves /admin/ and nothing else, and the public
+  # process does not route /admin/ at all.
+  #
+  # Bound to loopback and NOT proxied by Nginx: reach it over an SSH tunnel
+  # (see DEPLOY.md). Nothing about the admin is exposed to the internet.
+  admin:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: always
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8001 --workers 2 --timeout 120
+    volumes:
+      # Bind mount, not a named volume: Nginx serves /static/ straight off
+      # disk (see nginx.prod.conf) and needs a host path it can `alias` to.
+      # A named volume's backing directory lives under
+      # /var/lib/docker/volumes/..., which Nginx — a host process, not a
+      # container — cannot see; every static file 404'd until this pointed
+      # both sides at the same path.
+      - ../staticfiles_data:/app/staticfiles
+    env_file:
+      - ../.env
+    environment:
+      - ADMIN_SITE=1
+      # Migrations belong to the web service alone — two processes writing the
+      # schema at once is the race entrypoint.sh exists to prevent.
+      - RUN_MIGRATIONS=0
+    ports:
+      - "127.0.0.1:8001:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+      web:
+        condition: service_started
+
+  celery:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: always
+    command: celery -A config worker -l info --concurrency 1
+    env_file:
+      - ../.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+
+  # Scheduled jobs: public-scan discovery/refresh, subscription expiry
+  # reminders, RepoWatch notifications. Without this container none of
+  # CELERY_BEAT_SCHEDULE fires — the public scanner backlog never advances
+  # and the sitemap stays at its four static URLs.
+  beat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: always
+    command: celery -A config beat -l info
+    env_file:
+      - ../.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  redis_data:

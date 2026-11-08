@@ -1,0 +1,579 @@
+{
+ "live": {
+  "metrics": {
+   "accuracy": 0.796,
+   "actual_fails": 30,
+   "correct": 78,
+   "errors_ok": true,
+   "false_fail_rate": 0.5,
+   "false_fails": 15,
+   "pairs": 98,
+   "type_accuracy": 0.611
+  },
+  "pairs_ok": {
+   "TryGhost/Ghost-CLI::ci.tests": true,
+   "TryGhost/Ghost-CLI::docker.dockerfile": false,
+   "TryGhost/Ghost-CLI::docs.changelog": true,
+   "TryGhost/Ghost-CLI::docs.contributing": true,
+   "TryGhost/Ghost-CLI::ops.license": true,
+   "TryGhost/Ghost-CLI::ops.observability": false,
+   "TryGhost/Ghost-CLI::security.security_policy": true,
+   "bradtraversy/devconnector_2.0::ci.tests": true,
+   "bradtraversy/devconnector_2.0::deps.lockfile": true,
+   "bradtraversy/devconnector_2.0::docker.dockerfile": false,
+   "bradtraversy/devconnector_2.0::docker.dockerignore": true,
+   "bradtraversy/devconnector_2.0::docker.nonroot": true,
+   "bradtraversy/devconnector_2.0::ops.license": true,
+   "django/django::ci.tests": true,
+   "django/django::docker.dockerfile": true,
+   "django/django::docs.changelog": false,
+   "django/django::docs.contributing": true,
+   "django/django::docs.readme": true,
+   "django/django::ops.observability": true,
+   "docker/getting-started-app::ci.tests": true,
+   "docker/getting-started-app::deps.lockfile": true,
+   "docker/getting-started-app::docker.dockerfile": false,
+   "docker/getting-started-app::docker.healthcheck": true,
+   "docker/getting-started-app::docker.multistage": true,
+   "docker/getting-started-app::docker.nonroot": true,
+   "docker/getting-started-app::docker.pinned_base": true,
+   "docker/getting-started-app::ops.license": true,
+   "dockersamples/example-voting-app::ci.tests": true,
+   "dockersamples/example-voting-app::docker.dockerfile": false,
+   "dockersamples/example-voting-app::docker.nonroot": false,
+   "dockersamples/example-voting-app::ops.license": true,
+   "expressjs/express::ci.tests": true,
+   "expressjs/express::deps.lockfile": false,
+   "expressjs/express::docker.dockerfile": true,
+   "expressjs/express::docs.changelog": false,
+   "expressjs/express::ops.observability": true,
+   "fastapi/fastapi::ci.tests": true,
+   "fastapi/fastapi::docker.dockerfile": true,
+   "fastapi/fastapi::docker.dockerignore": true,
+   "fastapi/fastapi::docker.healthcheck": true,
+   "fastapi/fastapi::docker.multistage": true,
+   "fastapi/fastapi::docker.nonroot": true,
+   "fastapi/fastapi::docker.pinned_base": true,
+   "fastapi/fastapi::docker.resource_limits": true,
+   "fastapi/fastapi::docs.changelog": false,
+   "fastapi/fastapi::ops.observability": true,
+   "gitlab-org/gitlab-runner::ci.tests": false,
+   "gothinkster/django-realworld-example-app::ci.tests": true,
+   "gothinkster/django-realworld-example-app::docker.dockerfile": true,
+   "gothinkster/django-realworld-example-app::docker.dockerignore": false,
+   "gothinkster/django-realworld-example-app::docker.multistage": true,
+   "gothinkster/django-realworld-example-app::docker.nonroot": true,
+   "gothinkster/django-realworld-example-app::docker.pinned_base": true,
+   "gothinkster/django-realworld-example-app::ops.license": true,
+   "gothinkster/node-express-realworld-example-app::ci.tests": true,
+   "gothinkster/node-express-realworld-example-app::deps.lockfile": true,
+   "gothinkster/node-express-realworld-example-app::docker.dockerfile": true,
+   "gothinkster/node-express-realworld-example-app::docker.nonroot": true,
+   "gothinkster/node-express-realworld-example-app::ops.license": true,
+   "grafana/grafana::ci.tests": true,
+   "grafana/grafana::docker.dockerfile": true,
+   "grafana/grafana::docker.nonroot": true,
+   "grafana/grafana::ops.observability": true,
+   "miguelgrinberg/microblog::ci.tests": true,
+   "miguelgrinberg/microblog::docker.dockerfile": true,
+   "miguelgrinberg/microblog::docker.nonroot": true,
+   "miguelgrinberg/microblog::docker.pinned_base": false,
+   "miguelgrinberg/microblog::ops.license": true,
+   "nsidnev/fastapi-realworld-example-app::ci.tests": true,
+   "nsidnev/fastapi-realworld-example-app::deps.lockfile": true,
+   "nsidnev/fastapi-realworld-example-app::docker.dockerfile": true,
+   "nsidnev/fastapi-realworld-example-app::docker.nonroot": true,
+   "nsidnev/fastapi-realworld-example-app::docker.pinned_base": true,
+   "nsidnev/fastapi-realworld-example-app::docs.readme": true,
+   "nsidnev/fastapi-realworld-example-app::ops.license": true,
+   "prometheus-community/helm-charts::ci.tests": true,
+   "prometheus-community/helm-charts::docker.dockerfile": false,
+   "prometheus-community/helm-charts::ops.observability": false,
+   "sahat/hackathon-starter::ci.tests": true,
+   "sahat/hackathon-starter::deps.lockfile": true,
+   "sahat/hackathon-starter::docs.changelog": true,
+   "sahat/hackathon-starter::ops.license": true,
+   "sahat/hackathon-starter::security.security_policy": true,
+   "sindresorhus/awesome::ci.tests": false,
+   "sindresorhus/awesome::deps.lockfile": true,
+   "sindresorhus/awesome::deps.manifest": true,
+   "sindresorhus/awesome::docker.dockerfile": true,
+   "sindresorhus/awesome::docs.changelog": false,
+   "sindresorhus/awesome::ops.license": false,
+   "sindresorhus/awesome::ops.observability": true,
+   "terraform-aws-modules/terraform-aws-vpc::deps.lockfile": true,
+   "terraform-aws-modules/terraform-aws-vpc::docker.dockerfile": true,
+   "terraform-aws-modules/terraform-aws-vpc::docs.changelog": true,
+   "terraform-aws-modules/terraform-aws-vpc::ops.observability": true,
+   "testdrivenio/fastapi-tdd-docker::ci.tests": true,
+   "testdrivenio/fastapi-tdd-docker::docker.dockerfile": false,
+   "testdrivenio/fastapi-tdd-docker::docker.multistage": false,
+   "testdrivenio/fastapi-tdd-docker::ops.license": true
+  },
+  "per_check": {
+   "ci.tests": {
+    "correct": 15,
+    "fail_precision": 0.75,
+    "fail_recall": 1.0,
+    "false_fail": 2,
+    "matrix": {
+     "fail>fail": 6,
+     "na>fail": 1,
+     "pass>fail": 1,
+     "pass>pass": 9
+    },
+    "n": 17
+   },
+   "deps.lockfile": {
+    "correct": 7,
+    "fail_precision": 0.5,
+    "fail_recall": 1.0,
+    "false_fail": 1,
+    "matrix": {
+     "fail>fail": 1,
+     "na>fail": 1,
+     "na>na": 2,
+     "pass>pass": 4
+    },
+    "n": 8
+   },
+   "deps.manifest": {
+    "correct": 1,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "na>na": 1
+    },
+    "n": 1
+   },
+   "docker.dockerfile": {
+    "correct": 10,
+    "fail_precision": 0.2,
+    "fail_recall": 0.333,
+    "false_fail": 4,
+    "matrix": {
+     "fail>fail": 1,
+     "fail>na": 2,
+     "na>fail": 2,
+     "na>na": 5,
+     "pass>fail": 2,
+     "pass>pass": 4
+    },
+    "n": 16
+   },
+   "docker.dockerignore": {
+    "correct": 2,
+    "fail_precision": 0.0,
+    "fail_recall": null,
+    "false_fail": 1,
+    "matrix": {
+     "na>fail": 1,
+     "na>na": 2
+    },
+    "n": 3
+   },
+   "docker.healthcheck": {
+    "correct": 2,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "na>na": 2
+    },
+    "n": 2
+   },
+   "docker.multistage": {
+    "correct": 3,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "na>na": 3,
+     "pass>na": 1
+    },
+    "n": 4
+   },
+   "docker.nonroot": {
+    "correct": 8,
+    "fail_precision": 1.0,
+    "fail_recall": 0.75,
+    "false_fail": 0,
+    "matrix": {
+     "fail>fail": 3,
+     "fail>na": 1,
+     "na>na": 4,
+     "pass>pass": 1
+    },
+    "n": 9
+   },
+   "docker.pinned_base": {
+    "correct": 4,
+    "fail_precision": null,
+    "fail_recall": 0.0,
+    "false_fail": 0,
+    "matrix": {
+     "fail>pass": 1,
+     "na>na": 3,
+     "pass>pass": 1
+    },
+    "n": 5
+   },
+   "docker.resource_limits": {
+    "correct": 1,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "na>na": 1
+    },
+    "n": 1
+   },
+   "docs.changelog": {
+    "correct": 3,
+    "fail_precision": 0.0,
+    "fail_recall": null,
+    "false_fail": 4,
+    "matrix": {
+     "na>fail": 1,
+     "pass>fail": 3,
+     "pass>pass": 3
+    },
+    "n": 7
+   },
+   "docs.contributing": {
+    "correct": 2,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "pass>pass": 2
+    },
+    "n": 2
+   },
+   "docs.readme": {
+    "correct": 2,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "pass>pass": 2
+    },
+    "n": 2
+   },
+   "ops.license": {
+    "correct": 10,
+    "fail_precision": 0.8,
+    "fail_recall": 1.0,
+    "false_fail": 1,
+    "matrix": {
+     "fail>fail": 4,
+     "pass>fail": 1,
+     "pass>pass": 6
+    },
+    "n": 11
+   },
+   "ops.observability": {
+    "correct": 6,
+    "fail_precision": 0.0,
+    "fail_recall": null,
+    "false_fail": 2,
+    "matrix": {
+     "na>fail": 2,
+     "na>na": 5,
+     "pass>pass": 1
+    },
+    "n": 8
+   },
+   "security.security_policy": {
+    "correct": 2,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "pass>pass": 2
+    },
+    "n": 2
+   }
+  },
+  "types_ok": {
+   "TryGhost/Ghost-CLI": false,
+   "bradtraversy/devconnector_2.0": false,
+   "django/django": true,
+   "docker/getting-started-app": false,
+   "dockersamples/example-voting-app": true,
+   "expressjs/express": true,
+   "fastapi/fastapi": true,
+   "gitlab-org/gitlab-runner": false,
+   "gothinkster/django-realworld-example-app": true,
+   "gothinkster/node-express-realworld-example-app": false,
+   "grafana/grafana": false,
+   "miguelgrinberg/microblog": true,
+   "nsidnev/fastapi-realworld-example-app": true,
+   "prometheus-community/helm-charts": false,
+   "sahat/hackathon-starter": true,
+   "sindresorhus/awesome": true,
+   "terraform-aws-modules/terraform-aws-vpc": true,
+   "testdrivenio/fastapi-tdd-docker": true
+  }
+ },
+ "synthetic": {
+  "metrics": {
+   "accuracy": 0.792,
+   "actual_fails": 12,
+   "correct": 38,
+   "errors_ok": true,
+   "false_fail_rate": 0.75,
+   "false_fails": 9,
+   "pairs": 48,
+   "type_accuracy": 1.0
+  },
+  "pairs_ok": {
+   "aws-example-key::security.no_secrets": false,
+   "changelog-history-md::docs.changelog": false,
+   "changelog-in-docs::docs.changelog": false,
+   "docs-only::ci.tests": false,
+   "docs-only::deps.lockfile": true,
+   "docs-only::deps.manifest": true,
+   "docs-only::docker.dockerfile": true,
+   "docs-only::docs.changelog": false,
+   "docs-only::ops.license": true,
+   "docs-only::ops.observability": true,
+   "gitlab-ci-include::ci.tests": false,
+   "lib-python-tox::ci.tests": true,
+   "lib-python-tox::docker.dockerfile": true,
+   "lib-python-tox::docker.dockerignore": true,
+   "lib-python-tox::docker.healthcheck": true,
+   "lib-python-tox::docker.multistage": true,
+   "lib-python-tox::docker.nonroot": true,
+   "lib-python-tox::docker.pinned_base": true,
+   "lib-python-tox::docker.resource_limits": true,
+   "lib-python-tox::ops.observability": true,
+   "monorepo-pnpm::docker.dockerfile": false,
+   "monorepo-pnpm::docker.nonroot": false,
+   "no-dockerfile-service::docker.dockerfile": true,
+   "no-dockerfile-service::docker.dockerignore": false,
+   "no-dockerfile-service::docker.healthcheck": true,
+   "no-dockerfile-service::docker.multistage": true,
+   "no-dockerfile-service::docker.nonroot": true,
+   "no-dockerfile-service::docker.pinned_base": true,
+   "no-dockerfile-service::docker.resource_limits": true,
+   "no-tests-anywhere::ci.tests": true,
+   "readme-rst::docs.contributing": true,
+   "readme-rst::docs.readme": true,
+   "security-in-github-dir::security.security_policy": true,
+   "service-docker-good::docker.dockerfile": true,
+   "service-docker-good::docker.dockerignore": true,
+   "service-docker-good::docker.healthcheck": true,
+   "service-docker-good::docker.multistage": true,
+   "service-docker-good::docker.nonroot": true,
+   "service-docker-good::docker.pinned_base": true,
+   "service-docker-good::docker.resource_limits": true,
+   "service-docker-root::docker.dockerfile": true,
+   "service-docker-root::docker.nonroot": true,
+   "terraform-module::deps.lockfile": true,
+   "terraform-module::docker.dockerfile": true,
+   "terraform-module::docker.nonroot": true,
+   "tests-via-makefile::ci.tests": false,
+   "tests-via-reusable-workflow::ci.tests": true,
+   "tests-via-script::ci.tests": true
+  },
+  "per_check": {
+   "ci.tests": {
+    "correct": 4,
+    "fail_precision": 0.25,
+    "fail_recall": 1.0,
+    "false_fail": 3,
+    "matrix": {
+     "fail>fail": 1,
+     "na>fail": 1,
+     "pass>fail": 2,
+     "pass>pass": 3
+    },
+    "n": 7
+   },
+   "deps.lockfile": {
+    "correct": 2,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "na>na": 2
+    },
+    "n": 2
+   },
+   "deps.manifest": {
+    "correct": 1,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "na>na": 1
+    },
+    "n": 1
+   },
+   "docker.dockerfile": {
+    "correct": 6,
+    "fail_precision": 0.5,
+    "fail_recall": 1.0,
+    "false_fail": 1,
+    "matrix": {
+     "fail>fail": 1,
+     "na>na": 3,
+     "pass>fail": 1,
+     "pass>pass": 2
+    },
+    "n": 7
+   },
+   "docker.dockerignore": {
+    "correct": 2,
+    "fail_precision": 0.0,
+    "fail_recall": null,
+    "false_fail": 1,
+    "matrix": {
+     "na>fail": 1,
+     "na>na": 1,
+     "pass>pass": 1
+    },
+    "n": 3
+   },
+   "docker.healthcheck": {
+    "correct": 3,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "na>na": 2,
+     "pass>pass": 1
+    },
+    "n": 3
+   },
+   "docker.multistage": {
+    "correct": 3,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "na>na": 2,
+     "pass>pass": 1
+    },
+    "n": 3
+   },
+   "docker.nonroot": {
+    "correct": 5,
+    "fail_precision": 1.0,
+    "fail_recall": 1.0,
+    "false_fail": 0,
+    "matrix": {
+     "fail>fail": 1,
+     "na>na": 3,
+     "pass>na": 1,
+     "pass>pass": 1
+    },
+    "n": 6
+   },
+   "docker.pinned_base": {
+    "correct": 3,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "na>na": 2,
+     "pass>pass": 1
+    },
+    "n": 3
+   },
+   "docker.resource_limits": {
+    "correct": 3,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "na>na": 2,
+     "pass>pass": 1
+    },
+    "n": 3
+   },
+   "docs.changelog": {
+    "correct": 0,
+    "fail_precision": 0.0,
+    "fail_recall": null,
+    "false_fail": 3,
+    "matrix": {
+     "na>fail": 1,
+     "pass>fail": 2
+    },
+    "n": 3
+   },
+   "docs.contributing": {
+    "correct": 1,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "pass>pass": 1
+    },
+    "n": 1
+   },
+   "docs.readme": {
+    "correct": 1,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "pass>pass": 1
+    },
+    "n": 1
+   },
+   "ops.license": {
+    "correct": 1,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "pass>pass": 1
+    },
+    "n": 1
+   },
+   "ops.observability": {
+    "correct": 2,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "na>na": 2
+    },
+    "n": 2
+   },
+   "security.no_secrets": {
+    "correct": 0,
+    "fail_precision": 0.0,
+    "fail_recall": null,
+    "false_fail": 1,
+    "matrix": {
+     "pass>fail": 1
+    },
+    "n": 1
+   },
+   "security.security_policy": {
+    "correct": 1,
+    "fail_precision": null,
+    "fail_recall": null,
+    "false_fail": 0,
+    "matrix": {
+     "pass>pass": 1
+    },
+    "n": 1
+   }
+  },
+  "types_ok": {
+   "docs-only": true,
+   "lib-python-tox": true,
+   "monorepo-pnpm": true,
+   "no-dockerfile-service": true,
+   "service-docker-good": true,
+   "service-docker-root": true,
+   "terraform-module": true
+  }
+ }
+}

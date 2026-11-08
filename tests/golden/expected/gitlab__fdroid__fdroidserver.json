@@ -1,0 +1,34 @@
+{
+ "category_scores": {
+  "ci_cd": 77,
+  "deps": 100,
+  "security": 71
+ },
+ "checks": {
+  "ci.branch_protection": false,
+  "ci.linter": true,
+  "ci.pipeline": true,
+  "ci.security_scan": true,
+  "ci.tests": true,
+  "deps.manifest": true,
+  "docs.changelog": true,
+  "docs.contributing": true,
+  "docs.readme": true,
+  "docs.readme_quality": true,
+  "docs.templates": false,
+  "gitlab_ci.pinned_images": false,
+  "gitlab_ci.pinned_includes": true,
+  "ops.activity": false,
+  "ops.gitignore": true,
+  "ops.license": true,
+  "security.codeowners": false,
+  "security.dependency_updates": false,
+  "security.env_not_committed": true,
+  "security.no_secrets": true,
+  "security.security_policy": false
+ },
+ "confidence": 0.75,
+ "full_name": "fdroid/fdroidserver",
+ "kind": "library",
+ "score": 78
+}

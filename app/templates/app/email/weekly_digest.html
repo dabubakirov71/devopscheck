@@ -1,0 +1,90 @@
+{% load i18n %}<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>{% trans "Weekly engineering risk" %}</title></head>
+<body style="margin:0;padding:0;background:#050607;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#050607;padding:32px 16px">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+             style="max-width:600px;background:#0f1318;border:1px solid #1a2230;border-radius:10px">
+
+        <tr><td style="padding:28px 32px 0">
+          <div style="font-family:monospace;font-size:12px;letter-spacing:.16em;color:#00ff88">[ DEVOPSCHECK ]</div>
+          <h1 style="margin:16px 0 6px;font-size:21px;line-height:1.3;color:#f0f8ff;font-weight:700">{% trans "This week in your repositories" %}</h1>
+          <div style="font-family:monospace;font-size:12px;color:#748c9e">{{ since|date:"Y-m-d" }} — {{ now|date:"Y-m-d" }}</div>
+          <p style="margin:16px 0 0;font-size:15px;line-height:1.65;color:#d0e0f0">{{ summary }}</p>
+        </td></tr>
+
+        <tr><td style="padding:18px 32px 0">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr>
+            <td style="padding:12px;background:#161c22;border-radius:6px;text-align:center">
+              <div style="font-size:26px;font-weight:700;color:#f0f8ff">{{ avg_score|default:"—" }}</div>
+              <div style="font-size:11px;color:#748c9e">{% trans "average score" %}{% if avg_before is not None %} ({% blocktrans %}was {{ avg_before }}{% endblocktrans %}){% endif %}</div>
+            </td><td width="8"></td>
+            <td style="padding:12px;background:#161c22;border-radius:6px;text-align:center">
+              <div style="font-size:26px;font-weight:700;color:{% if incidents %}#ff4466{% else %}#00ff88{% endif %}">{{ incidents|length }}</div>
+              <div style="font-size:11px;color:#748c9e">{% trans "live leaked keys" %}</div>
+            </td><td width="8"></td>
+            <td style="padding:12px;background:#161c22;border-radius:6px;text-align:center">
+              <div style="font-size:26px;font-weight:700;color:#4488ff">{{ ready_prs|length }}</div>
+              <div style="font-size:11px;color:#748c9e">{% trans "fixes ready to merge" %}</div>
+            </td>
+            {% if compliance_pct is not None %}<td width="8"></td>
+            <td style="padding:12px;background:#161c22;border-radius:6px;text-align:center">
+              <div style="font-size:26px;font-weight:700;color:#f0f8ff">{{ compliance_pct }}%</div>
+              <div style="font-size:11px;color:#748c9e">{% trans "SOC 2 controls met" %}</div>
+            </td>{% endif %}
+          </tr></table>
+        </td></tr>
+
+        {% if top_actions %}
+        <tr><td style="padding:22px 32px 0">
+          <div style="font-family:monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#748c9e;margin-bottom:10px">{% trans "Do these three this week" %}</div>
+          {% for a in top_actions %}
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px"><tr>
+            <td style="padding:11px 13px;background:#161c22;border-left:3px solid {% if a.kind == 'incident' %}#ff4466{% else %}#ffaa00{% endif %};border-radius:0 5px 5px 0">
+              <div style="font-size:13.5px;color:#d0e0f0;font-weight:600">{{ forloop.counter }}. <a href="{{ a.url }}" style="color:#d0e0f0;text-decoration:none">{{ a.text }}</a></div>
+              <div style="font-size:12px;color:#748c9e;margin-top:3px;font-family:monospace">{{ a.repo }}</div>
+            </td></tr></table>
+          {% endfor %}
+        </td></tr>
+        {% endif %}
+
+        {% if worsened %}
+        <tr><td style="padding:18px 32px 0">
+          <div style="font-family:monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#748c9e;margin-bottom:10px">{% trans "Got worse" %}</div>
+          {% for r in worsened %}
+          <div style="font-size:13px;color:#d0e0f0;margin-bottom:6px">
+            <a href="{{ r.url }}" style="color:#d0e0f0">{{ r.name }}</a>
+            {% if r.delta is not None %}<span style="font-family:monospace;color:{% if r.delta < 0 %}#ff4466{% else %}#748c9e{% endif %}">{{ r.before }} → {{ r.score }}</span>{% endif %}
+            {% if r.new_findings %}<div style="font-size:12px;color:#8aa3b2">{% trans "new" %}: {{ r.new_findings|join:", " }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </td></tr>
+        {% endif %}
+
+        {% if ready_prs %}
+        <tr><td style="padding:18px 32px 0">
+          <div style="font-family:monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#748c9e;margin-bottom:10px">{% trans "Ready to merge — CI is green" %}</div>
+          {% for p in ready_prs %}
+          <div style="font-size:13px;margin-bottom:6px"><a href="{{ p.url }}" style="color:#4488ff">{{ p.title }}</a> <span style="color:#748c9e;font-family:monospace;font-size:12px">{{ p.repo }}</span></div>
+          {% endfor %}
+        </td></tr>
+        {% endif %}
+
+        <tr><td style="padding:22px 32px 0">
+          <a href="{{ dashboard_url }}" style="display:inline-block;background:#00ff88;color:#050607;font-family:monospace;font-size:13px;font-weight:700;letter-spacing:.05em;text-decoration:none;padding:13px 26px;border-radius:5px">{% trans "Open the dashboard" %} →</a>
+        </td></tr>
+
+        <tr><td style="padding:26px 32px 28px">
+          <hr style="border:none;border-top:1px solid #1a2230;margin:0 0 14px">
+          <p style="margin:0;font-size:11.5px;line-height:1.6;color:#5c7180">
+            {% trans "The weekly digest of your Team plan." %}
+            <a href="{{ settings_url }}" style="color:#748c9e">{% trans "Change recipients or day" %}</a> ·
+            <a href="{{ unsubscribe_url }}" style="color:#748c9e">{% trans "Stop these emails" %}</a>
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

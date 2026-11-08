@@ -1,0 +1,304 @@
+{% extends "app/base.html" %}
+{% load i18n app_extras %}
+
+{% block title %}{% if language %}{% blocktrans %}{{ language }} repositories ranked by DevOps hygiene{% endblocktrans %}{% else %}{% trans "The state of DevOps hygiene on GitHub" %}{% endif %} — DevOpsCheck{% endblock %}
+
+{% block meta_description %}{% blocktrans with n=summary.total %}{{ n }} public repositories audited for secrets, CI, dependencies, containers and infrastructure. See the score distribution, the checks that fail most often, and where any repository stands.{% endblocktrans %}{% endblock %}
+
+{% block canonical %}{% localized canonical %}{% endblock %}
+
+{% block extra_style %}
+.rk-wrap { max-width: 1000px; margin: 0 auto; padding: 34px 24px 80px; }
+
+.rk-eyebrow {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
+}
+.rk-title {
+  font-size: clamp(26px, 4.4vw, 42px); font-weight: 700;
+  letter-spacing: -.025em; line-height: 1.12; color: #f0f8ff;
+}
+.rk-lede {
+  font-size: 15px; color: var(--muted); line-height: 1.7;
+  margin-top: 12px; max-width: 62ch;
+}
+
+.rk-kpis {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1px; background: var(--border); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden; margin-top: 30px;
+}
+.rk-kpi { background: var(--surface); padding: 18px 20px; }
+.rk-kpi-label {
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .13em;
+  text-transform: uppercase; color: var(--muted);
+}
+.rk-kpi-value {
+  font-family: var(--mono); font-size: 30px; font-weight: 700;
+  letter-spacing: -.02em; margin-top: 8px; font-variant-numeric: tabular-nums;
+}
+.rk-kpi-note { font-size: 11.5px; color: var(--dim); margin-top: 5px; line-height: 1.5; }
+
+.rk-section {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--muted); font-weight: 600;
+  border-top: 1px solid var(--border); padding-top: 14px;
+  margin: 48px 0 8px; display: flex; justify-content: space-between;
+  align-items: baseline; gap: 12px;
+}
+.rk-note { font-size: 13px; color: var(--dim); line-height: 1.6; margin-bottom: 18px; max-width: 68ch; }
+
+/* Score distribution */
+.rk-bands { display: flex; flex-direction: column; gap: 10px; }
+.rk-band { display: grid; grid-template-columns: 78px 1fr 84px; gap: 14px; align-items: center; }
+.rk-band-range { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.rk-band-track { height: 22px; background: var(--surface); border-radius: 4px; overflow: hidden; }
+.rk-band-fill { height: 100%; border-radius: 4px; min-width: 2px; }
+.rk-band-green { background: #00cc6a; }
+.rk-band-blue  { background: #4488ff; }
+.rk-band-amber { background: #ffaa00; }
+.rk-band-red   { background: #ff4466; }
+.rk-band-value {
+  font-family: var(--mono); font-size: 12.5px; color: var(--text);
+  text-align: right; font-variant-numeric: tabular-nums;
+}
+.rk-band-value small { color: var(--dim); }
+
+/* How often each check fails */
+.rk-checks { display: flex; flex-direction: column; gap: 8px; }
+.rk-check {
+  display: grid; grid-template-columns: 1fr 130px 64px; gap: 14px; align-items: center;
+  border: 1px solid var(--border); border-radius: 7px;
+  background: var(--surface); padding: 12px 15px;
+}
+.rk-check-name { font-size: 13.5px; color: var(--text); font-weight: 500; min-width: 0; }
+.rk-check-sev {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
+  text-transform: uppercase; padding: 2px 6px; border-radius: 3px; margin-left: 8px;
+  vertical-align: 1px; white-space: nowrap;
+}
+.sev-crit { background: rgba(255,68,102,.12); color: var(--red); }
+.sev-warn { background: rgba(255,170,0,.12);  color: var(--amber); }
+.sev-info { background: rgba(68,136,255,.12); color: var(--blue); }
+.rk-check-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.rk-check-fill { height: 100%; border-radius: 3px; background: var(--red); }
+.rk-check-pct {
+  font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--text);
+  text-align: right; font-variant-numeric: tabular-nums;
+}
+
+/* Leaderboards */
+.rk-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+.rk-list { display: flex; flex-direction: column; gap: 6px; }
+.rk-row {
+  display: grid; grid-template-columns: 26px 1fr auto; gap: 12px; align-items: center;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); padding: 10px 13px; transition: border-color .15s;
+}
+.rk-row:hover { border-color: var(--border2); }
+.rk-rank { font-family: var(--mono); font-size: 11px; color: var(--dim); text-align: right; }
+.rk-repo { font-family: var(--mono); font-size: 12.5px; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rk-repo-meta { font-size: 11px; color: var(--dim); margin-top: 2px; }
+.rk-score {
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  padding: 3px 8px; border-radius: 4px; white-space: nowrap;
+}
+.s-green { background: rgba(0,255,136,.12); color: var(--accent); }
+.s-blue  { background: rgba(68,136,255,.12); color: var(--blue); }
+.s-amber { background: rgba(255,170,0,.12);  color: var(--amber); }
+.s-red   { background: rgba(255,68,102,.12); color: var(--red); }
+.s-gray  { background: var(--surface2);      color: var(--muted); }
+
+/* Language switcher */
+.rk-langs { display: flex; flex-wrap: wrap; gap: 7px; }
+.rk-lang {
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em;
+  border: 1px solid var(--border2); border-radius: 4px;
+  padding: 7px 13px; color: var(--muted); transition: all .15s;
+}
+.rk-lang:hover { border-color: var(--accent); color: var(--accent); }
+.rk-lang.on { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 700; }
+.rk-lang-n { color: inherit; opacity: .55; margin-left: 5px; }
+
+.rk-cta {
+  border: 1px solid rgba(0,255,136,.3); background: rgba(0,255,136,.04);
+  border-radius: 10px; padding: 26px 28px; margin-top: 52px;
+}
+.rk-cta h2 { font-size: 19px; font-weight: 700; color: #f0f8ff; }
+.rk-cta p { font-size: 14px; color: var(--muted); line-height: 1.65; margin-top: 8px; max-width: 60ch; }
+.rk-cta-form { display: flex; gap: 9px; margin-top: 18px; flex-wrap: wrap; }
+.rk-cta-input {
+  flex: 1 1 280px; min-width: 0; background: var(--bg2, var(--surface));
+  border: 1px solid var(--border2); border-radius: 6px;
+  padding: 12px 15px; color: var(--text); font-family: var(--mono); font-size: 13px;
+}
+.rk-cta-input:focus { border-color: var(--accent); outline: none; }
+.rk-cta-btn {
+  background: var(--accent); color: var(--bg); border: none; border-radius: 6px;
+  padding: 12px 26px; font-family: var(--mono); font-size: 13px; font-weight: 700;
+  letter-spacing: .05em; cursor: pointer; transition: background .15s;
+}
+.rk-cta-btn:hover { background: var(--accent2); }
+
+.rk-empty {
+  border: 1px dashed var(--border2); border-radius: 8px;
+  padding: 34px 24px; text-align: center; color: var(--muted); font-size: 13.5px;
+  line-height: 1.7;
+}
+
+@media (max-width: 760px) {
+  .rk-cols { grid-template-columns: 1fr; }
+  .rk-check { grid-template-columns: 1fr 64px; }
+  .rk-check-track { display: none; }
+  .rk-band { grid-template-columns: 66px 1fr 72px; gap: 10px; }
+}
+{% endblock %}
+
+{% block content %}
+<div class="rk-wrap">
+
+  <div class="rk-eyebrow">// {% trans "rankings" %}</div>
+  <h1 class="rk-title">
+    {% if language %}
+      {% blocktrans %}{{ language }} repositories, ranked by DevOps hygiene{% endblocktrans %}
+    {% else %}
+      {% trans "The state of DevOps hygiene on GitHub" %}
+    {% endif %}
+  </h1>
+  <p class="rk-lede">
+    {% trans "Every repository here was scanned by the same engine anyone can run for free: secrets in the tree, known CVEs, CI and branch protection, container hardening, Terraform and Kubernetes. No account, no token, no configuration." %}
+  </p>
+
+  {% if summary.total < min_sample %}
+    <div class="rk-empty" style="margin-top:30px">
+      {% blocktrans with n=summary.total m=min_sample %}Only {{ n }} repositories have been scanned so far. Rankings appear once there are at least {{ m }} — a percentile drawn from a handful is noise dressed up as a fact.{% endblocktrans %}
+      <div style="margin-top:16px">
+        <a href="{% url 'scan_index' %}" style="color:var(--accent)">{% trans "Scan a repository" %} →</a>
+      </div>
+    </div>
+  {% else %}
+
+  <div class="rk-kpis">
+    <div class="rk-kpi">
+      <div class="rk-kpi-label">{% trans "Repositories scanned" %}</div>
+      <div class="rk-kpi-value" style="color:var(--accent)">{{ summary.total }}</div>
+      {% if language %}<div class="rk-kpi-note">{% blocktrans with n=scoped_total lang=language %}{{ n }} of them {{ lang }}{% endblocktrans %}</div>{% endif %}
+    </div>
+    <div class="rk-kpi">
+      <div class="rk-kpi-label">{% trans "Median score" %}</div>
+      <div class="rk-kpi-value">{{ summary.median }}</div>
+      <div class="rk-kpi-note">{% trans "half score below this" %}</div>
+    </div>
+    <div class="rk-kpi">
+      <div class="rk-kpi-label">{% trans "Average score" %}</div>
+      <div class="rk-kpi-value">{{ summary.average }}</div>
+      <div class="rk-kpi-note">{% trans "out of 100" %}</div>
+    </div>
+    {% if prevalence %}
+    <div class="rk-kpi">
+      <div class="rk-kpi-label">{% trans "Most common failure" %}</div>
+      <div class="rk-kpi-value" style="font-size:30px;color:var(--red)">{{ prevalence.0.pct }}%</div>
+      <div class="rk-kpi-note">{{ prevalence.0.name }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if languages %}
+  <div class="rk-section">{% trans "By language" %}</div>
+  <div class="rk-langs">
+    <a class="rk-lang {% if not language %}on{% endif %}" href="{% url 'rankings' %}">{% trans "All" %}<span class="rk-lang-n">{{ summary.total }}</span></a>
+    {% for entry in languages %}
+    <a class="rk-lang {% if entry.slug == language_slug %}on{% endif %}"
+       href="{% url 'rankings_language' entry.slug %}">{{ entry.name }}<span class="rk-lang-n">{{ entry.count }}</span></a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="rk-section">{% trans "Score distribution" %}</div>
+  <p class="rk-note">{% trans "Where the scanned repositories land. A score is earned points over available points, weighted by severity — a critical finding costs six times an informational one." %}</p>
+  <div class="rk-bands">
+    {% for band in summary.bands %}
+    <div class="rk-band">
+      <div class="rk-band-range">{{ band.low }}–{{ band.high }}</div>
+      <div class="rk-band-track">
+        <div class="rk-band-fill rk-band-{{ band.color }}" style="width:{{ band.pct }}%"></div>
+      </div>
+      <div class="rk-band-value">{{ band.pct }}% <small>({{ band.count }})</small></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if prevalence %}
+  <div class="rk-section">
+    <span>{% trans "What fails most often" %}</span>
+    <span style="color:var(--dim);font-size: 11.5px">{% trans "share of repositories the check applies to" %}</span>
+  </div>
+  <p class="rk-note">{% trans "Checks a repository cannot act on are left out — a library is not marked down for having no Dockerfile — so each number is out of the repositories the check genuinely applies to." %}</p>
+  <div class="rk-checks">
+    {% for check in prevalence %}
+    <div class="rk-check">
+      <div class="rk-check-name">
+        {{ check.name }}<span class="rk-check-sev sev-{{ check.severity }}">{{ check.severity }}</span>
+      </div>
+      <div class="rk-check-track">
+        <div class="rk-check-fill" style="width:{{ check.pct }}%"></div>
+      </div>
+      <div class="rk-check-pct">{{ check.pct }}%</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="rk-cols" style="margin-top:8px">
+    <div>
+      <div class="rk-section">{% trans "Highest scoring" %}</div>
+      <div class="rk-list">
+        {% for scan in best %}
+        <a class="rk-row" href="/scan/{{ scan.repo_full_name }}/">
+          <div class="rk-rank">{{ forloop.counter }}</div>
+          <div>
+            <div class="rk-repo">{{ scan.repo_full_name }}</div>
+            <div class="rk-repo-meta">
+              {% if scan.primary_language %}{{ scan.primary_language }} · {% endif %}★ {{ scan.stars }}
+            </div>
+          </div>
+          <div class="rk-score s-{{ scan.score_color }}">{{ scan.score }}</div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    <div>
+      <div class="rk-section">{% trans "Most room to improve" %}</div>
+      <div class="rk-list">
+        {% for scan in worst %}
+        <a class="rk-row" href="/scan/{{ scan.repo_full_name }}/">
+          <div class="rk-rank">{{ forloop.counter }}</div>
+          <div>
+            <div class="rk-repo">{{ scan.repo_full_name }}</div>
+            <div class="rk-repo-meta">
+              {% if scan.primary_language %}{{ scan.primary_language }} · {% endif %}★ {{ scan.stars }}
+            </div>
+          </div>
+          <div class="rk-score s-{{ scan.score_color }}">{{ scan.score }}</div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {% endif %}
+
+  <div class="rk-cta">
+    <h2>{% trans "Where does yours land?" %}</h2>
+    <p>{% trans "Scan any public repository free, with no account. You get the score, every finding, and the change that fixes it." %}</p>
+    <form class="rk-cta-form" method="post" action="{% url 'scan_submit' %}">
+      {% csrf_token %}
+      <input class="rk-cta-input" type="text" name="repo" placeholder="django/django"
+             aria-label="{% trans 'Repository' %}" required>
+      <button class="rk-cta-btn" type="submit">{% trans "Scan" %} →</button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

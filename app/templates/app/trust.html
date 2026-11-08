@@ -1,0 +1,119 @@
+{% extends "app/base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Trust & security" %} — DevOpsCheck{% endblock %}
+{% block meta_description %}{% trans "What DevOpsCheck reads from your repository, what it sends to an AI provider and what it never does, how access tokens are stored, and how to delete your account." %}{% endblock %}
+{% block og_title %}{% trans "DevOpsCheck — trust & security" %}{% endblock %}
+{% block og_description %}{% trans "What leaves your repository, what never does, and how to turn it off." %}{% endblock %}
+
+{% block extra_style %}
+.tr-wrap { max-width: 760px; margin: 0 auto; padding: 56px 24px 80px; }
+.tr-head { margin-bottom: 40px; }
+.tr-eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+.tr-head h1 { font-size: clamp(26px, 4vw, 36px); font-weight: 800; letter-spacing: -.03em; line-height: 1.15; color: #f0f8ff; margin-bottom: 14px; }
+.tr-head p { color: var(--muted); font-size: 15px; line-height: 1.7; }
+
+.tr-section { margin-bottom: 36px; }
+.tr-section h2 { font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--text); font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.tr-section p { color: var(--muted); font-size: 14.5px; line-height: 1.75; margin-bottom: 12px; }
+.tr-section p:last-child { margin-bottom: 0; }
+.tr-section a { color: var(--accent); }
+
+.tr-list { list-style: none; margin: 0 0 12px; padding: 0; }
+.tr-list li { font-size: 14px; line-height: 1.6; padding: 6px 0 6px 24px; position: relative; color: var(--text); }
+.tr-list li.yes::before { content: '✓'; position: absolute; left: 0; color: var(--accent); font-size: 12px; top: 8px; }
+.tr-list li.no::before { content: '✕'; position: absolute; left: 0; color: var(--dim); font-size: 12px; top: 8px; }
+.tr-list li.no { color: var(--muted); }
+
+.tr-callout { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin: 12px 0; }
+.tr-callout p { margin: 0; font-size: 13.5px; }
+.tr-callout.warn { border-color: rgba(255,170,0,.25); }
+.tr-callout.warn p { color: var(--text); }
+
+.tr-code { font-family: var(--mono); font-size: 12.5px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 2px 6px; color: var(--accent); }
+
+.tr-cta { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: var(--bg); background: var(--accent); border-radius: 5px; padding: 10px 16px; text-decoration: none; margin-top: 4px; }
+.tr-cta:hover { background: var(--accent2); }
+
+@media (max-width: 640px) {
+  .tr-wrap { padding: 36px 18px 60px; }
+}
+{% endblock %}
+
+{% block content %}
+<div class="tr-wrap">
+  <div class="tr-head">
+    <div class="tr-eyebrow">{% trans "trust & security" %}</div>
+    <h1>{% trans "What actually happens to your repository" %}</h1>
+    <p>{% trans "This page states plainly what the product does, not a policy written separately from the code. Every claim below has a switch or a function behind it — the AI toggle on the profile page, the secret redaction in the audit engine, the encryption on stored tokens." %}</p>
+  </div>
+
+  <div class="tr-section">
+    <h2>{% trans "What an audit reads" %}</h2>
+    <p>{% trans "An audit downloads your repository's file tree once, on our server, to run the checks and compute the score. It reads file paths and, for a small set of specific files a failed check is about (a Dockerfile, a CI workflow, .gitignore), their content. It does not execute anything in the repository." %}</p>
+  </div>
+
+  <div class="tr-section">
+    <h2>{% trans "What goes to an AI provider, and only if you leave it on" %}</h2>
+    <p>{% trans "The AI step is optional and is what writes the summary paragraph and per-issue suggestions in natural language. Turn it off on the profile page and reports keep their summary and advice, written by our own rules instead of a model — nothing about the feature disappears, only the third party does." %}</p>
+    <ul class="tr-list">
+      <li class="yes">{% trans "The failed check's name and our recommendation for it." %}</li>
+      <li class="yes">{% trans "Facts read from the repository: languages, frameworks, Docker base images and ports, CI workflow names, Terraform providers, the top-level file list, the first lines of the README." %}</li>
+      <li class="yes">{% trans "For some checks, the one configuration file the check is about — a Dockerfile, a CI workflow, a .gitignore — truncated to 4000 characters." %}</li>
+      {# app/ai_review.py: MAX_FILES, MAX_FILE_CHARS, MAX_TOTAL_CHARS. Keep in step. #}
+      <li class="yes">{% trans "For the AI review of an audit: up to 12 configuration files — Dockerfiles, compose files, CI workflows, Kubernetes manifests, Terraform — at most 6,000 characters each and 28,000 in total. Files under tests, examples, docs and vendored dependencies are skipped." %}</li>
+    </ul>
+    <p>{% trans "Never sent:" %}</p>
+    <ul class="tr-list">
+      <li class="no">{% trans "Your source code. No check reads application code, and none is forwarded." %}</li>
+      <li class="no">{% trans "Anything the secret scanner recognises. Every credential pattern it reports on is masked before sending — including in files it is not scanning. The secrets check itself sends no file at all." %}</li>
+      <li class="no">{% trans "Your access tokens, which are encrypted at rest and never appear in a prompt." %}</li>
+    </ul>
+    <p>{% blocktrans %}Which provider that is depends on what is configured: your own key on the profile page if you set one, otherwise whichever of Anthropic, OpenAI or Google Gemini the deployment has a key for. With no key configured anywhere, or with the toggle off, nothing leaves at all and the built-in rules write the report.{% endblocktrans %}</p>
+    <p>{% blocktrans %}Public and private repositories are treated differently. For a public repository we may use Google Gemini's free tier, whose terms allow Google to use requests to improve its products — the code is public already. A private repository never goes to a free tier: it is sent only to a paid provider whose terms exclude training on your data, or it gets the built-in rules.{% endblocktrans %}</p>
+    <a class="tr-cta" href="{% url 'connect' %}#ai">{% trans "Open the AI setting" %} →</a>
+  </div>
+
+  <div class="tr-section">
+    <h2>{% trans "How access tokens are stored" %}</h2>
+    <p>{% trans 'A GitHub or GitLab access token is the most sensitive thing this product holds — it can read your private source. Tokens are encrypted at rest (Fernet: AES-128-CBC with an HMAC) before they ever reach the database, with a dedicated encryption key separate from the key that signs sessions and CSRF tokens. Nothing in the codebase logs a token, and the admin panel renders every token field as "set" or "not set" — never its value, not even to us.' %}</p>
+    <p>{% trans "A connection made through the GitHub App mints a short-lived token fresh for each use rather than relying on a long-lived one — the one stored at the moment you connect is not read again afterward." %}</p>
+  </div>
+
+  <div class="tr-section">
+    <h2>{% trans "How long things are kept" %}</h2>
+    <p>{% trans "Audit history is kept so the score trend on your dashboard has something to chart, and is not automatically deleted today. Removing a repository from your dashboard stops new audits and hides its history from your lists; the rows themselves, and a report reached by direct link, are kept until the account is deleted." %}</p>
+    <div class="tr-callout">
+      <p>{% trans "We are stating this as it is, not as we would like it to read: there is no automatic retention limit yet. If that matters for your compliance posture, contact us before connecting a repository you need a hard retention guarantee for." %}</p>
+    </div>
+  </div>
+
+  <div class="tr-section">
+    <h2>{% trans "Deleting your account" %}</h2>
+    <p>{% trans "The profile page has a delete-account control that removes the account and everything tied to it in one action: connected provider accounts and their tokens, every audit and its findings, subscription and usage records, AI settings. There is no separate export or deletion request process to wait on — it happens immediately, from a page you already have access to." %}</p>
+    <a class="tr-cta" href="{% url 'connect' %}">{% trans "Go to your profile" %} →</a>
+  </div>
+
+  <div class="tr-section">
+    <h2>{% trans "Who else can see repository data" %}</h2>
+    <ul class="tr-list">
+      <li class="yes">{% trans "GitHub or GitLab — reading the repository you connected requires calling their API, same as any tool you authorise." %}</li>
+      <li class="yes">{% trans "An AI provider (Anthropic, OpenAI or Google Gemini) — only the facts listed above, and only if the AI setting is on." %}</li>
+      <li class="yes">{% trans "Lemon Squeezy or Cryptomus — only for the payment page, and only your billing details, never repository content." %}</li>
+      <li class="no">{% trans "Nobody else. No analytics vendor and no advertising network runs on any page behind a login." %}</li>
+    </ul>
+  </div>
+
+  {# app/funnel.py — keep in step with what it stores. #}
+  <div class="tr-section">
+    <h2>{% trans "What we measure about visits" %}</h2>
+    <p>{% trans "No analytics vendor, no advertising pixels, no fingerprinting. To see which pages and links bring people, the product records its own events on our server: a landing visit, a scan started or finished, a report emailed, a sign-up, a fix pull request opened, a checkout started. Each carries only where the visit first came from — a utm or ref tag, or the referring site's domain — kept in one first-party cookie for 90 days." %}</p>
+    <p>{% trans "No IP address, browser details or cookie value is stored with an event. For a signed-in account the event is linked to that account, which the product holds anyway. Automated traffic is not counted." %}</p>
+  </div>
+
+  <div class="tr-section">
+    <h2>{% trans "Reporting a security issue" %}</h2>
+    <p>{% blocktrans %}Email {{ support_email }} — see also our <span class="tr-code">/.well-known/security.txt</span> for the machine-readable version. We would rather hear about a problem privately than read about it somewhere else first.{% endblocktrans %}</p>
+  </div>
+</div>
+{% endblock %}

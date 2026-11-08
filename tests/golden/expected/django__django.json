@@ -1,0 +1,40 @@
+{
+ "category_scores": {
+  "ai_agents": 100,
+  "ci_cd": 54,
+  "deps": 100,
+  "security": 85
+ },
+ "checks": {
+  "actions.broad_permissions": true,
+  "actions.pinned_sha": false,
+  "actions.pull_request_target": true,
+  "actions.script_injection": true,
+  "actions.self_hosted_public": true,
+  "ai.instructions_clean": true,
+  "ci.branch_protection": false,
+  "ci.linter": true,
+  "ci.pipeline": true,
+  "ci.security_scan": false,
+  "ci.tests": true,
+  "deps.cve": true,
+  "deps.manifest": true,
+  "docs.changelog": true,
+  "docs.contributing": true,
+  "docs.readme": true,
+  "docs.readme_quality": true,
+  "docs.templates": true,
+  "ops.activity": false,
+  "ops.gitignore": true,
+  "ops.license": true,
+  "security.codeowners": false,
+  "security.dependency_updates": false,
+  "security.env_not_committed": true,
+  "security.no_secrets": true,
+  "security.security_policy": true
+ },
+ "confidence": 0.85,
+ "full_name": "django/django",
+ "kind": "library",
+ "score": 81
+}

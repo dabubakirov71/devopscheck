@@ -1,0 +1,233 @@
+{% extends "app/base.html" %}
+{% load i18n app_extras %}
+
+{% block title %}{{ repo_display }} — {% trans "DevOps audit" %}{% endblock %}
+{% block meta_description %}{% blocktrans with repo=repo_display score=audit.score %}{{ repo }} scores {{ score }}/100 on an automated DevOps audit — secrets, known CVEs, CI/CD, Docker, Kubernetes and Terraform.{% endblocktrans %}{% endblock %}
+{% block canonical %}{{ public_url }}{% endblock %}
+{% block og_title %}{{ repo_display }} — DevOpsCheck{% endblock %}
+{% block og_description %}{% blocktrans with score=audit.score %}Score {{ score }}/100 on an automated DevOps audit.{% endblocktrans %}{% endblock %}
+{% block og_image %}{{ og_image }}{% endblock %}
+{% block twitter_image %}{{ og_image }}{% endblock %}
+
+{% block extra_style %}
+.pa-wrap { max-width: 940px; margin: 0 auto; padding: 40px 24px 72px; }
+.pa-crumb { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+.pa-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+.pa-title { font-size: clamp(24px, 4vw, 34px); font-weight: 700; letter-spacing: -.025em; color: #f0f8ff; word-break: break-word; }
+.pa-meta { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 10px; display: flex; gap: 14px; flex-wrap: wrap; }
+.pa-meta a:hover { color: var(--accent); }
+/* "View repository" is a standalone action, not a link inside a sentence. */
+@media (pointer: coarse), (max-width: 700px) {
+  .pa-meta a { display: inline-flex; align-items: center; min-height: 40px; }
+}
+
+.pa-score { text-align: right; flex-shrink: 0; }
+.pa-score-num { font-family: var(--mono); font-size: 62px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.pa-score-of { font-size: 13px; color: var(--muted); font-family: var(--mono); }
+.pa-score-label { font-family: var(--mono); font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; margin-top: 6px; }
+.s-green { color: #00cc6a } .s-blue { color: var(--blue) } .s-amber { color: var(--amber) }
+.s-red { color: var(--red) } .s-gray { color: var(--dim) }
+
+.pa-cats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin: 32px 0 0; }
+.pa-cat-name { font-family: var(--mono); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.pa-cat-bar { height: 6px; background: var(--surface2); border-radius: 3px; margin: 7px 0 5px; overflow: hidden; }
+.pa-cat-fill { height: 100%; border-radius: 3px; }
+.pa-cat-val { font-family: var(--mono); font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
+
+.pa-section { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600; border-top: 1px solid var(--border);
+  padding-top: 14px; margin: 44px 0 16px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+
+.pa-fold-summary { cursor: pointer; list-style: none; transition: color .15s; }
+.pa-fold-summary::-webkit-details-marker { display: none; }
+.pa-fold-summary:hover { color: var(--text); }
+.pa-fold-count { color: var(--dim); margin-left: 6px; }
+.pa-fold-arrow { font-size: 11px; color: var(--dim); transition: transform .2s ease; }
+.pa-fold[open] .pa-fold-arrow { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .pa-fold-arrow { transition: none; } }
+
+.chk { display: grid; grid-template-columns: 26px 1fr; gap: 0 12px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--surface);
+  padding: 14px 16px; margin-bottom: 8px; }
+.chk-icon { font-family: var(--mono); font-size: 13px; padding-top: 1px; }
+/* A grid item defaults to min-width:auto, so one unbreakable token — a commit
+   SHA in a recommendation — sets the column's minimum and pushes the whole page
+   sideways. min-width:0 lets the column shrink; the code block scrolls inside
+   itself instead of scrolling the document. */
+.chk > * { min-width: 0; }
+.chk-name, .chk-desc { overflow-wrap: anywhere; }
+.chk-name { font-size: 14px; font-weight: 600; color: #e8f4ff; }
+.chk-desc { font-size: 13px; color: var(--muted); margin-top: 5px; line-height: 1.6; }
+/* pre-wrap, not pre: the recommendation is the useful half of the report and
+   `pre` cut every long one off at the right edge. */
+.chk-rec { font-size: 12.5px; color: var(--text); margin-top: 10px;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+  border-left: 2px solid var(--border2); padding-left: 12px; font-family: var(--mono);
+  line-height: 1.7; overflow-x: auto; }
+.chk-sev { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 3px; margin-left: 8px; vertical-align: 2px; }
+.sev-crit { background: rgba(255,68,102,.12); color: var(--red); border: 1px solid rgba(255,68,102,.25) }
+.chk-live { background: var(--red); color: #fff; border: 1px solid var(--red) }
+.sev-warn { background: rgba(255,170,0,.1); color: var(--amber); border: 1px solid rgba(255,170,0,.22) }
+.sev-info { background: rgba(68,136,255,.1); color: var(--blue); border: 1px solid rgba(68,136,255,.22) }
+.chk.pass { opacity: .72; }
+/* Set aside for this kind of repository — shown, explained, out of the score. */
+.chk-na { opacity: .6; }
+.chk-na .chk-name { font-weight: 500; color: var(--muted); }
+.chk-na-reason { font-size: 12.5px; color: var(--muted); line-height: 1.6; margin: 0 0 12px; max-width: 68ch; }
+.chk.pass .chk-name { color: var(--text); font-weight: 500; }
+
+.pa-cta { border: 1px solid var(--accent); background: rgba(0,255,136,.05);
+  border-radius: 8px; padding: 24px; margin-top: 44px; }
+.pa-cta h2 { font-size: 17px; color: #f0f8ff; margin-bottom: 8px; }
+.pa-cta p { color: var(--muted); font-size: 13.5px; margin-bottom: 16px; max-width: 60ch; }
+.pa-cta a { display: inline-block; font-family: var(--mono); font-size: 12px; font-weight: 700;
+  letter-spacing: .05em; padding: 11px 22px; background: var(--accent); color: var(--bg); border-radius: 4px; }
+
+.badge-code { font-family: var(--mono); font-size: 11px; color: var(--muted); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px;
+  overflow-x: auto; white-space: nowrap; cursor: pointer; width: 100%; text-align: left; }
+.badge-code:hover { border-color: var(--border2); color: var(--text); }
+
+@media (max-width: 640px) {
+  .pa-wrap { padding: 26px 16px 60px; }
+  .pa-head { flex-direction: column; gap: 14px; }
+  .pa-score { text-align: left; }
+  .pa-score-num { font-size: 46px; }
+}
+{% endblock %}
+
+{% block content %}
+<div class="pa-wrap">
+  <div class="pa-crumb">{% trans "Public report" %}</div>
+
+  <div class="pa-head">
+    <div>
+      <h1 class="pa-title">{{ repo_display }}</h1>
+      <div class="pa-meta">
+        <span>{{ audit.source|upper }}</span>
+        <span>{% trans "audited" %} {{ audit.completed_at|date:"j M Y" }}</span>
+        {% if audit.commit_sha %}<span>{{ audit.commit_sha|slice:":7" }}</span>{% endif %}
+        <a href="{{ audit.repo_url }}" rel="nofollow noopener" target="_blank">{% trans "View repository" %} ↗</a>
+      </div>
+    </div>
+    <div class="pa-score">
+      <div class="pa-score-num s-{{ audit.score_color }}">{{ audit.score }}</div>
+      <div class="pa-score-of">/ 100</div>
+      <div class="pa-score-label s-{{ audit.score_color }}">{{ audit.score_label }}</div>
+    </div>
+  </div>
+
+  {% if audit.category_scores %}
+  <div class="pa-cats">
+    {% for key, value in audit.category_scores.items %}
+    <div>
+      <div class="pa-cat-name">{{ key }}</div>
+      <div class="pa-cat-bar">
+        <div class="pa-cat-fill" style="width:{{ value }}%;background:{% if value >= 80 %}#00cc6a{% elif value >= 60 %}#4488ff{% elif value >= 40 %}#ffaa00{% else %}#ff4466{% endif %}"></div>
+      </div>
+      <div class="pa-cat-val">{{ value }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="pa-section">
+    <span>{% trans "Issues" %}</span>
+    <span style="color:var(--dim)">{{ crit_count }} {% trans "critical" %} · {{ warn_count }} {% trans "warnings" %}</span>
+  </div>
+  {% for check in failed %}
+  <div class="chk">
+    <div class="chk-icon" style="color:{% if check.severity == 'crit' %}var(--red){% elif check.severity == 'warn' %}var(--amber){% else %}var(--blue){% endif %}">✗</div>
+    <div>
+      <div class="chk-name">{{ check.name }}{% if check.check_id == 'security.secret_active' %}<span class="chk-sev chk-live">{% trans "live key" %}</span>{% endif %}<span class="chk-sev sev-{{ check.severity }}">{{ check.severity }}</span></div>
+      <div class="chk-desc">{{ check.description }}</div>
+      {% if check.recommendation %}<div class="chk-rec">{{ check.recommendation }}</div>{% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <div class="chk">
+    <div class="chk-icon" style="color:var(--accent)">✓</div>
+    <div>
+      <div class="chk-name">{% trans "Nothing failed" %}</div>
+      <div class="chk-desc">{% trans "Every check in the engine passed for this repository." %}</div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="pa-cta">
+    <h2>{% trans "Run this on your own repositories" %}</h2>
+    <p>{% trans "Scan any public repository free and without an account, or connect GitHub or GitLab to audit private ones, track the score over time and open a fix as a pull request." %}</p>
+    <a href="/scan/">{% trans "Scan a repository" %} →</a>
+  </div>
+
+  <div class="pa-section">{% trans "Badge for the README" %}</div>
+  <button type="button" class="badge-code" onclick="copyBadge(this)" title="{% trans 'Click to copy' %}">[![DevOps Score]({{ badge_url }})]({{ public_url }})</button>
+
+  {% comment %}
+    Folded for the same reason as the free scanner: a reader who opened a shared
+    link wants the findings, not a list of everything that was fine. The counts
+    stay on the summary so nothing reads as concealed.
+  {% endcomment %}
+  <details class="pa-fold">
+    <summary class="pa-section pa-fold-summary">
+      <span>{% trans "Passed" %} <span class="pa-fold-count">{{ passed|length }}</span></span>
+      <span class="pa-fold-arrow" aria-hidden="true">▶</span>
+    </summary>
+    {% for check in passed %}
+    <div class="chk pass">
+      <div class="chk-icon" style="color:var(--accent)">✓</div>
+      <div><div class="chk-name">{{ check.name }}</div></div>
+    </div>
+    {% endfor %}
+  </details>
+
+  {% comment %}
+    This section used to sit outside .pa-wrap, so it ran the full width of the
+    window while every other block was in the column.
+  {% endcomment %}
+  {% if hygiene %}
+  {% comment %}Hygiene: shown, never scored — see checks.HYGIENE_CHECKS.{% endcomment %}
+  <details class="pa-fold">
+    <summary class="pa-section pa-fold-summary">
+      <span>{% trans "Repository hygiene — not in the score" %} <span class="pa-fold-count">{{ hygiene|length }}</span></span>
+      <span class="pa-fold-arrow" aria-hidden="true">▶</span>
+    </summary>
+    {% for check in hygiene %}
+    <div class="chk {% if check.passed %}pass{% endif %}">
+      <div class="chk-icon" style="color:var({% if check.passed %}--accent{% else %}--dim{% endif %})">{% if check.passed %}✓{% else %}○{% endif %}</div>
+      <div><div class="chk-name">{{ check.name }}</div>{% if not check.passed and check.recommendation %}<div class="chk-desc">{{ check.recommendation|truncatechars:220 }}</div>{% endif %}</div>
+    </div>
+    {% endfor %}
+  </details>
+  {% endif %}
+
+  {% if not_applicable %}
+  <details class="pa-fold">
+    <summary class="pa-section pa-fold-summary">
+      <span>{% trans "Does not apply here" %} <span class="pa-fold-count">{{ not_applicable.count }}</span></span>
+      <span class="pa-fold-arrow" aria-hidden="true">▶</span>
+    </summary>
+    <p class="chk-na-reason">{{ not_applicable_reason }}</p>
+    {% for check in not_applicable %}
+    <div class="chk chk-na">
+      <div class="chk-icon" style="color:var(--dim)">–</div>
+      <div><div class="chk-name">{{ check.name }}</div></div>
+    </div>
+    {% endfor %}
+  </details>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyBadge(el) {
+  copyText(el.textContent.trim()).then(function (ok) {
+    const original = el.style.borderColor;
+    el.style.borderColor = ok ? 'var(--accent)' : 'var(--red)';
+    setTimeout(function () { el.style.borderColor = original; }, 900);
+  });
+}
+</script>
+{% endblock %}

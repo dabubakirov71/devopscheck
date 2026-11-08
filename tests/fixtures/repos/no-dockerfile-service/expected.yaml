@@ -1,0 +1,9 @@
+expected_type: service
+checks:
+  dockerfile_present: fail
+  container_nonroot: na
+  dockerfile_multistage: na
+  base_image_pinned: na
+  dockerignore: na
+  healthcheck: na
+  compose_resource_limits: na

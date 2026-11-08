@@ -1,0 +1,74 @@
+{% extends "app/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Weekly digest" %} — DevOpsCheck{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+
+{% block extra_style %}
+.dg-wrap { max-width: 1080px; margin: 0 auto; padding: 32px 16px 64px; }
+.dg-grid { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 860px) { .dg-grid { grid-template-columns: 1fr; } }
+.dg-card { border: 1px solid var(--border2); border-radius: 8px; padding: 20px; }
+.dg-card h2 { font-size: 15px; margin: 0 0 14px; }
+.dg-field { margin-bottom: 14px; }
+.dg-field label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 6px; }
+.dg-field input[type=text], .dg-field select { width: 100%; box-sizing: border-box; padding: 9px 10px;
+  background: transparent; color: var(--text); border: 1px solid var(--border2); border-radius: 5px; font: inherit; }
+.dg-check { display: flex; gap: 8px; align-items: center; font-size: 13.5px; }
+.dg-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.dg-btn { padding: 9px 16px; border-radius: 5px; border: 1px solid var(--border2); background: transparent;
+  color: var(--text); font: inherit; cursor: pointer; }
+.dg-btn-primary { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+.dg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dg-err { color: var(--red); font-size: 13px; margin: 0 0 10px; }
+.dg-hint { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+.dg-preview { width: 100%; height: 900px; border: 1px solid var(--border2); border-radius: 8px; background: #050607; }
+.dg-subject { font-family: var(--mono); font-size: 12.5px; color: var(--muted); margin-bottom: 8px; overflow-wrap: anywhere; }
+{% endblock %}
+
+{% block content %}
+<div class="dg-wrap">
+  <h1>{% trans "Weekly digest" %}</h1>
+
+  {% if stopped %}
+    <p>{% if found %}{% trans "Done — the weekly digest is switched off. You can turn it back on from this page after signing in." %}{% else %}{% trans "This link is no longer valid." %}{% endif %}</p>
+
+  {% elif locked %}
+    <p class="dg-hint">{% trans "A weekly email for the person who owns engineering risk: what got worse, the three things to do this week, fixes that are ready to merge, live leaked keys, and control coverage. It comes with the Team plan." %}</p>
+    <a class="dg-btn dg-btn-primary" href="{% url 'billing' %}">{% trans "See plans" %} →</a>
+
+  {% else %}
+  <p class="dg-hint">{% trans "Sent once a week at 08:00 UTC on the day you choose. The numbers come from your audits; only the two-sentence opening is written by a model, and by a template when no model may read your repositories." %}</p>
+  <div class="dg-grid">
+    <form method="post" class="dg-card">{% csrf_token %}
+      <h2>{% trans "Settings" %}</h2>
+      {% for e in errors %}<p class="dg-err">{{ e }}</p>{% endfor %}
+      <div class="dg-field"><label class="dg-check"><input type="checkbox" name="enabled" {% if settings.enabled %}checked{% endif %}> {% trans "Send the weekly digest" %}</label></div>
+      <div class="dg-field">
+        <label for="dg-recipients">{% trans "Recipients (comma-separated; empty = your own address)" %}</label>
+        <input id="dg-recipients" type="text" name="recipients" value="{{ settings.recipients }}" placeholder="{{ request.user.email }}">
+      </div>
+      <div class="dg-field">
+        <label for="dg-day">{% trans "Day" %}</label>
+        <select id="dg-day" name="weekday">{% for n, label in weekdays %}<option value="{{ n }}" {% if n == settings.weekday %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+      </div>
+      <div class="dg-field">
+        <label for="dg-lang">{% trans "Language" %}</label>
+        <select id="dg-lang" name="language">
+          <option value="en" {% if settings.language == 'en' %}selected{% endif %}>English</option>
+          <option value="ru" {% if settings.language == 'ru' %}selected{% endif %}>Русский</option>
+        </select>
+      </div>
+      <div class="dg-actions">
+        <button class="dg-btn dg-btn-primary" type="submit" name="action" value="save">{% trans "Save" %}</button>
+        <button class="dg-btn" type="submit" name="action" value="send_test">{% trans "Send me a test now" %}</button>
+      </div>
+      {% if settings.last_sent_at %}<p class="dg-hint">{% blocktrans with when=settings.last_sent_at|date:"Y-m-d H:i" %}Last sent {{ when }} UTC.{% endblocktrans %}</p>{% endif %}
+    </form>
+    <div>
+      <div class="dg-subject">{{ preview_subject }}</div>
+      <iframe class="dg-preview" title="{% trans 'Preview of this week’s digest' %}" sandbox srcdoc="{{ preview_html }}"></iframe>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
