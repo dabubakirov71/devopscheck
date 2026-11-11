@@ -14,6 +14,10 @@ Leaked secrets · vulnerable dependencies · CI/CD supply chain · Docker · Kub
 
 [Features](#-features) · [Quick start](#-quick-start) · [GitHub Action](#-github-action) · [Configuration](#%EF%B8%8F-configuration) · [Architecture](#-architecture)
 
+<br>
+
+<img src="docs/images/demo.gif" alt="Scanning a public repository with DevOpsCheck: enter owner/repo, get a 0–100 score and a list of findings with fixes" width="860">
+
 </div>
 
 ---
@@ -27,6 +31,12 @@ self-hosted)**, and is fully self-hostable with one `docker compose up`.
  repo ──► one tarball download ──► 50 checks ──► score + findings ──► report / PDF / PR comment / SARIF
           (3 API calls total)        (in memory)    (weighted)          / SBOM / fix pull request
 ```
+
+## 📸 Screenshots
+
+| Report with copy-paste fixes | Fully translated into Russian |
+|---|---|
+| <img src="docs/images/report-en.png" alt="DevOpsCheck report for terraform-aws-modules/terraform-aws-vpc: score 71/100, category scores and a critical Terraform state finding with the fix" width="420"> | <img src="docs/images/report-ru.png" alt="The same DevOpsCheck report in Russian" width="420"> |
 
 ## ✨ Features
 
